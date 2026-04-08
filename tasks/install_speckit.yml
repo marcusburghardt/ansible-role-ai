@@ -1,0 +1,26 @@
+---
+- name: "{{ role_name }} | {{ task.name }} | Resolve SpecKit version"
+  when: ai_speckit_version == 'latest'
+  block:
+    - name: "{{ role_name }} | {{ task.name }} | Query GitHub API for latest SpecKit release"
+      ansible.builtin.uri:
+        url: https://api.github.com/repos/github/spec-kit/releases/latest
+        return_content: true
+      register: speckit_latest_release
+      changed_when: false
+
+    - name: "{{ role_name }} | {{ task.name }} | Set resolved SpecKit version to latest release tag"
+      ansible.builtin.set_fact:
+        _speckit_resolved_version: "{{ speckit_latest_release.json.tag_name }}"
+
+- name: "{{ role_name }} | {{ task.name }} | Set resolved SpecKit version to pinned value"
+  ansible.builtin.set_fact:
+    _speckit_resolved_version: "{{ ai_speckit_version }}"
+  when: ai_speckit_version != 'latest'
+
+- name: "{{ role_name }} | {{ task.name }} | Install or update SpecKit (specify-cli) via uv"
+  ansible.builtin.command:
+    cmd: >-
+      uv tool install specify-cli --force
+      --from "git+https://github.com/github/spec-kit.git@{{ _speckit_resolved_version }}"
+  changed_when: true

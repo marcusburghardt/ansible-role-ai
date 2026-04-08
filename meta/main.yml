@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  author: Marcus Burghardt
+  description: Role for managing AI developer tools installation and configuration.
+  license: Apache-2.0
+  min_ansible_version: '2.16'
+  platforms:
+    - name: EL
+      versions:
+        - all
+    - name: Fedora
+      versions:
+        - all
+  galaxy_tags:
+    - ai
+    - opencode
+    - developer-tools
+dependencies: []

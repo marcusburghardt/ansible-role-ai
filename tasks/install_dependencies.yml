@@ -1,0 +1,7 @@
+---
+- name: "{{ role_name }} | {{ task.name }} | Ensure required packages are installed"
+  become: true
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ packages }}"

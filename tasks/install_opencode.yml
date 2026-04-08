@@ -1,0 +1,14 @@
+---
+- name: "{{ role_name }} | {{ task.name }} | Ensure directory for npm"
+  ansible.builtin.file:
+    path: ~/.npm
+    state: directory
+    mode: "0750"
+
+- name: "{{ role_name }} | {{ task.name }} | Install OpenCode (opencode-ai) via npm"
+  become: true
+  community.general.npm:
+    name: opencode-ai
+    version: "{{ ai_opencode_version if ai_opencode_version != 'latest' else omit }}"
+    state: "{{ 'latest' if ai_opencode_version == 'latest' else 'present' }}"
+    global: true

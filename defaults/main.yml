@@ -1,0 +1,54 @@
+---
+# Role Defaults
+ai_tasks:
+  - { enabled: false, name: 'install_dependencies' }
+  - { enabled: true, name: 'install_opencode' }
+  - { enabled: true, name: 'configure_opencode' }
+  - { enabled: true, name: 'install_openspec' }
+  - { enabled: true, name: 'install_speckit' }
+
+# User directories
+ai_user_home_dir: "{{ ansible_facts['user_dir'] }}"
+ai_user_scripts_dir: "{{ ai_user_home_dir }}/bin"
+
+# AI Agent wrapper script
+ai_agent_script_name: mybuddy
+
+# AI Tools Versions
+# For npm packages (OpenCode, OpenSPEC): set to "latest" for automatic updates
+# on each run, or pin to a specific version (e.g., "1.2.3").
+ai_opencode_version: latest
+ai_openspec_version: latest
+# For SpecKit: set to "latest" to auto-detect the newest GitHub release,
+# or pin to a release tag (e.g., "v0.4.4").
+# Available releases: https://github.com/github/spec-kit/releases
+ai_speckit_version: latest
+
+# AI Model settings
+ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
+ai_small_model: "anthropic/claude-sonnet-4-5"
+
+# GCP settings for AI model access
+# Set these to your real values when using Google Vertex AI as the provider.
+# These are harmlessly ignored when not using Vertex.
+ai_gcp_project: "your-gcp-project"
+ai_vertex_location: "us-central1"
+
+# OpenCode configuration
+ai_opencode_config_dir: "{{ ai_user_home_dir }}/.config/opencode"
+ai_opencode_config_file: "{{ ai_opencode_config_dir }}/opencode.json"
+
+# OpenCode instruction files
+# The ~/... path is resolved from the user's home directory (always loaded).
+# Relative paths are resolved from the repo root (loaded if the file exists).
+# Order matters: later entries override earlier ones on conflicting rules.
+ai_opencode_instructions:
+  - "~/.config/opencode/commit.md"
+  - ".specify/memory/constitution.md"
+  - "AGENTS.md"
+  - "CLAUDE.md"
+
+# Trusted GitHub organizations for command security guards
+# Commands like checkout_pr and review_pr will verify the repo owner
+# against this list before proceeding. Empty list means always ask.
+ai_trusted_github_orgs: []

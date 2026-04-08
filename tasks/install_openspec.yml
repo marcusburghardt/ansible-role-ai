@@ -1,0 +1,8 @@
+---
+- name: "{{ role_name }} | {{ task.name }} | Install OpenSPEC (@fission-ai/openspec) via npm"
+  become: true
+  community.general.npm:
+    name: "@fission-ai/openspec"
+    version: "{{ ai_openspec_version if ai_openspec_version != 'latest' else omit }}"
+    state: "{{ 'latest' if ai_openspec_version == 'latest' else 'present' }}"
+    global: true

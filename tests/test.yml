@@ -1,0 +1,14 @@
+---
+# Smoke test: exercises the dispatcher and configuration deployment
+# without requiring npm, uv, or GitHub API access.
+- hosts: localhost
+  remote_user: root
+  vars:
+    ai_tasks:
+      - {enabled: false, name: 'install_dependencies'}
+      - {enabled: false, name: 'install_opencode'}
+      - {enabled: true, name: 'configure_opencode'}
+      - {enabled: false, name: 'install_openspec'}
+      - {enabled: false, name: 'install_speckit'}
+  roles:
+    - ansible-role-ai

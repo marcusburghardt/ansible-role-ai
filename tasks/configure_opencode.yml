@@ -1,0 +1,58 @@
+---
+- name: "{{ role_name }} | {{ task.name }} | Ensure directory for AI agent scripts"
+  ansible.builtin.file:
+    path: "{{ ai_user_scripts_dir }}"
+    state: directory
+    mode: "0750"
+
+- name: "{{ role_name }} | {{ task.name }} | Ensure OpenCode config directory"
+  ansible.builtin.file:
+    path: "{{ ai_opencode_config_dir }}"
+    state: directory
+    mode: "0750"
+
+- name: "{{ role_name }} | {{ task.name }} | Ensure OpenCode command directory"
+  ansible.builtin.file:
+    path: "{{ ai_opencode_command_dir }}"
+    state: directory
+    mode: "0750"
+
+- name: "{{ role_name }} | {{ task.name }} | Ensure OpenCode skills directory"
+  ansible.builtin.file:
+    path: "{{ ai_opencode_skills_dir }}"
+    state: directory
+    mode: "0750"
+
+- name: "{{ role_name }} | {{ task.name }} | Ensure agent-neutral skills directory"
+  ansible.builtin.file:
+    path: "{{ ai_user_home_dir }}/.agents/skills"
+    state: directory
+    mode: "0750"
+
+- name: "{{ role_name }} | {{ task.name }} | Deploy OpenCode configuration file"
+  ansible.builtin.template:
+    src: opencode.json.j2
+    dest: "{{ ai_opencode_config_file }}"
+    mode: "0600"
+
+- name: "{{ role_name }} | {{ task.name }} | Deploy AI agent wrapper script"
+  ansible.builtin.template:
+    src: ai_agent_script.sh.j2
+    dest: "{{ ai_user_scripts_dir }}/{{ ai_agent_script_name }}"
+    mode: "0750"
+
+- name: "{{ role_name }} | {{ task.name }} | Deploy commit standards instruction file"
+  ansible.builtin.copy:
+    src: commit.md
+    dest: "{{ ai_opencode_config_dir }}/commit.md"
+    mode: "0640"
+
+- name: "{{ role_name }} | {{ task.name }} | Deploy managed command files"
+  ansible.builtin.copy:
+    src: "commands/{{ item }}"
+    dest: "{{ ai_opencode_command_dir }}/{{ item }}"
+    mode: "0640"
+  loop:
+    - checkout_pr.md
+    - review_pr.md
+    - refresh.md

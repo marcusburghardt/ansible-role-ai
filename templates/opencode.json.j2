@@ -1,0 +1,55 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "model": "{{ ai_model }}",
+    "small_model": "{{ ai_small_model }}",
+    "autoupdate": "notify",
+    "share": "manual",
+    "provider": {
+      "google-vertex-anthropic": {
+        "models": {
+          "claude-opus-4-6@default": {
+            "options": {
+              "thinking": {
+                "type": "enabled",
+                "budgetTokens": 32000
+              }
+            }
+          }
+        }
+      }
+    },
+    "disabled_providers": ["openai", "gemini"],
+    "permission": {
+      "bash": {
+        "*": "ask",
+        "gh run view *": "allow",
+        "git branch*": "allow",
+        "git checkout*": "allow",
+        "git commit *": "ask",
+        "git diff*": "allow",
+        "git fetch*": "allow",
+        "git log*": "allow",
+        "git push *": "ask",
+        "git pull*": "allow",
+        "git status*": "allow",
+        "go *": "allow",
+        "jq *": "allow",
+        "rm *": "ask"
+      },
+      "edit": "allow",
+      "read": {
+        "*": "allow",
+        "*.env": "deny",
+        "*.env.*": "deny"
+      }
+    },
+    "compaction": {
+      "auto": true,
+      "prune": true,
+      "reserved": 10000
+    },
+    "instructions": {{ ai_opencode_instructions | to_json }},
+    "watcher": {
+      "ignore": ["node_modules/**", "dist/**", ".git/**", "vendor/**"]
+    }
+}
