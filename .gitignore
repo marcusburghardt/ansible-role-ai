@@ -1,0 +1,24 @@
+# SpecKit/OpenSpec framework infrastructure (tool-managed)
+.specify/extensions/.cache/
+.specify/extensions/.backup/
+.specify/extensions/*/local-config.yml
+.specify/scripts
+.specify/templates
+
+# OpenCode framework commands (tool-managed via plugin)
+.opencode/command/speckit.*
+.opencode/command/opsx-*
+
+# OpenCode plugin artifacts (local)
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
+.opencode/.gitignore
+
+# Agent tool directories (local only)
+.cursor
+.claude
+
+# Agent-specific files (local only)
+CLAUDE.md
