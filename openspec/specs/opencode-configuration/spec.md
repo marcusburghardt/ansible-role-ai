@@ -11,7 +11,7 @@ The role SHALL deploy the OpenCode configuration file to `ai_opencode_config_fil
 
 #### Scenario: Instructions list includes org governance files by default
 - **WHEN** the role deploys with default `ai_opencode_instructions` value
-- **THEN** the `instructions` array in the deployed `opencode.json` SHALL contain `[".specify/memory/constitution.md", "AGENTS.md", "CLAUDE.md"]`, aligning with the SpecKit-standard constitution path
+- **THEN** the `instructions` array in the deployed `opencode.json` SHALL contain `["~/.config/opencode/commit.md", "~/.config/opencode/coding-standards.md", ".specify/memory/constitution.md", "AGENTS.md", "CLAUDE.md"]`, with global baseline files preceding repository-relative paths
 
 #### Scenario: Instructions list is customizable
 - **WHEN** the consumer overrides `ai_opencode_instructions` to `["CUSTOM.md"]`

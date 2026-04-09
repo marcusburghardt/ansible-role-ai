@@ -47,6 +47,12 @@
     dest: "{{ ai_opencode_config_dir }}/commit.md"
     mode: "0640"
 
+- name: "{{ role_name }} | {{ task.name }} | Deploy coding standards instruction file"
+  ansible.builtin.copy:
+    src: coding-standards.md
+    dest: "{{ ai_opencode_config_dir }}/coding-standards.md"
+    mode: "0640"
+
 - name: "{{ role_name }} | {{ task.name }} | Discover built-in command files"
   ansible.builtin.find:
     paths: "{{ role_path }}/files/commands"

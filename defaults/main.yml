@@ -45,6 +45,7 @@ ai_opencode_config_file: "{{ ai_opencode_config_dir }}/opencode.json"
 # Order matters: later entries override earlier ones on conflicting rules.
 ai_opencode_instructions:
   - "~/.config/opencode/commit.md"
+  - "~/.config/opencode/coding-standards.md"
   - ".specify/memory/constitution.md"
   - "AGENTS.md"
   - "CLAUDE.md"
