@@ -22,6 +22,9 @@
     "permission": {
       "bash": {
         "*": "ask",
+        ".specify/scripts/bash/*": "allow",
+        "echo *": "allow",
+        "find *": "allow",
         "gh run view *": "allow",
         "git branch*": "allow",
         "git checkout*": "allow",
@@ -34,13 +37,24 @@
         "git status*": "allow",
         "go *": "allow",
         "jq *": "allow",
-        "rm *": "ask"
+        "ls *": "allow",
+        "openspec *": "allow",
+        "rm *": "ask",
+        "test *": "allow",
+        "specify *": "allow",
+        "which *": "allow"
       },
       "edit": "allow",
       "read": {
         "*": "allow",
         "*.env": "deny",
-        "*.env.*": "deny"
+        "*.env.*": "deny",
+        "*.key": "deny",
+        "*.pem": "deny",
+        "*.crt": "deny",
+        "*.cer": "deny",
+        "*.p12": "deny",
+        "*.p8": "deny"
       }
     },
     "compaction": {

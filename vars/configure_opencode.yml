@@ -2,3 +2,9 @@
 # vars file for configure_opencode task
 ai_opencode_command_dir: "{{ ai_opencode_config_dir }}/command"
 ai_opencode_skills_dir: "{{ ai_opencode_config_dir }}/skills"
+
+# Resolved skills deploy directory based on ai_skills_target
+ai_opencode_skills_deploy_dir: >-
+  {{ ai_user_home_dir + '/.agents/skills'
+     if ai_skills_target == 'agent-neutral'
+     else ai_opencode_skills_dir }}

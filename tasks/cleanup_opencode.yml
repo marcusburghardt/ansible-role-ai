@@ -1,0 +1,18 @@
+---
+- name: "{{ role_name }} | {{ task.name }} | Remove specified command files"
+  ansible.builtin.file:
+    path: "{{ ai_opencode_command_dir }}/{{ item }}"
+    state: absent
+  loop: "{{ ai_opencode_commands_cleanup }}"
+  loop_control:
+    label: "{{ item }}"
+  when: ai_opencode_commands_cleanup | length > 0
+
+- name: "{{ role_name }} | {{ task.name }} | Remove specified skill directories"
+  ansible.builtin.file:
+    path: "{{ ai_opencode_skills_deploy_dir }}/{{ item }}"
+    state: absent
+  loop: "{{ ai_opencode_skills_cleanup }}"
+  loop_control:
+    label: "{{ item }}"
+  when: ai_opencode_skills_cleanup | length > 0

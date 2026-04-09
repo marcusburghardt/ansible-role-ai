@@ -4,6 +4,7 @@ ai_tasks:
   - { enabled: false, name: 'install_dependencies' }
   - { enabled: true, name: 'install_opencode' }
   - { enabled: true, name: 'configure_opencode' }
+  - { enabled: false, name: 'cleanup_opencode' }
   - { enabled: true, name: 'install_openspec' }
   - { enabled: true, name: 'install_speckit' }
 
@@ -12,7 +13,7 @@ ai_user_home_dir: "{{ ansible_facts['user_dir'] }}"
 ai_user_scripts_dir: "{{ ai_user_home_dir }}/bin"
 
 # AI Agent wrapper script
-ai_agent_script_name: mybuddy
+ai_agent_script_name: skynet
 
 # AI Tools Versions
 # For npm packages (OpenCode, OpenSPEC): set to "latest" for automatic updates
@@ -51,4 +52,41 @@ ai_opencode_instructions:
 # Trusted GitHub organizations for command security guards
 # Commands like checkout_pr and review_pr will verify the repo owner
 # against this list before proceeding. Empty list means always ask.
-ai_trusted_github_orgs: []
+ai_trusted_github_orgs: ['marcusburghardt', 'complytime']
+
+# OpenCode commands
+# Built-in commands from files/commands/ are auto-discovered and deployed.
+# Disable specific built-ins by name (without .md extension):
+ai_opencode_commands_disabled: []
+#   - checkout_pr
+#   - review_pr
+
+# Deploy additional commands from local paths (relative to playbook or absolute):
+ai_opencode_commands_custom: []
+#   - src: ../shared-commands/deploy_staging.md
+#   - src: /opt/team/audit.md
+#     name: security_audit.md    # optional: override deployed filename
+
+# OpenCode skills
+# Built-in skills from files/skills/ are auto-discovered and deployed.
+# Disable specific built-ins by name (directory name):
+ai_opencode_skills_disabled: []
+#   - some-built-in-skill
+
+# Deploy additional skills from local paths (relative to playbook or absolute):
+ai_opencode_skills_custom: []
+#   - src: ../shared-skills/deploy-workflow
+#   - src: /opt/team/review-skill
+#     name: team-review          # optional: override deployed directory name
+
+# Where to deploy user-level skills:
+#   "agent-neutral"  => ~/.agents/skills/  (works with any AI agent)
+#   "opencode"       => ~/.config/opencode/skills/  (OpenCode only)
+ai_skills_target: agent-neutral
+
+# Cleanup (used by cleanup_opencode task, disabled by default in ai_tasks)
+# Remove specific commands/skills from the target host by name.
+ai_opencode_commands_cleanup: []
+#   - old_command.md
+ai_opencode_skills_cleanup: []
+#   - deprecated-skill

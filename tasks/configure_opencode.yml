@@ -47,12 +47,59 @@
     dest: "{{ ai_opencode_config_dir }}/commit.md"
     mode: "0640"
 
-- name: "{{ role_name }} | {{ task.name }} | Deploy managed command files"
+- name: "{{ role_name }} | {{ task.name }} | Discover built-in command files"
+  ansible.builtin.find:
+    paths: "{{ role_path }}/files/commands"
+    patterns: "*.md"
+    file_type: file
+  register: _ai_builtin_commands
+
+- name: "{{ role_name }} | {{ task.name }} | Deploy built-in command files"
   ansible.builtin.copy:
-    src: "commands/{{ item }}"
-    dest: "{{ ai_opencode_command_dir }}/{{ item }}"
+    src: "{{ item.path }}"
+    dest: "{{ ai_opencode_command_dir }}/{{ item.path | basename }}"
     mode: "0640"
-  loop:
-    - checkout_pr.md
-    - review_pr.md
-    - refresh.md
+  loop: "{{ _ai_builtin_commands.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: (item.path | basename | regex_replace('\.md$', '')) not in ai_opencode_commands_disabled
+
+- name: "{{ role_name }} | {{ task.name }} | Deploy custom command files"
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ ai_opencode_command_dir }}/{{ item.name | default(item.src | basename) }}"
+    mode: "0640"
+  loop: "{{ ai_opencode_commands_custom }}"
+  loop_control:
+    label: "{{ item.name | default(item.src | basename) }}"
+  when: ai_opencode_commands_custom | length > 0
+
+- name: "{{ role_name }} | {{ task.name }} | Discover built-in skill directories"
+  ansible.builtin.find:
+    paths: "{{ role_path }}/files/skills"
+    file_type: directory
+    recurse: false
+  register: _ai_builtin_skills
+  failed_when: false
+
+- name: "{{ role_name }} | {{ task.name }} | Deploy built-in skills"
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ai_opencode_skills_deploy_dir }}/{{ item.path | basename }}/"
+    mode: "0640"
+    directory_mode: "0750"
+  loop: "{{ _ai_builtin_skills.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: (item.path | basename) not in ai_opencode_skills_disabled
+
+- name: "{{ role_name }} | {{ task.name }} | Deploy custom skills"
+  ansible.builtin.copy:
+    src: "{{ item.src }}/"
+    dest: "{{ ai_opencode_skills_deploy_dir }}/{{ item.name | default(item.src | basename) }}/"
+    mode: "0640"
+    directory_mode: "0750"
+  loop: "{{ ai_opencode_skills_custom }}"
+  loop_control:
+    label: "{{ item.name | default(item.src | basename) }}"
+  when: ai_opencode_skills_custom | length > 0

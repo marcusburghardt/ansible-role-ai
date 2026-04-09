@@ -11,8 +11,9 @@ This role will:
 - Ensure SpecKit (specify-cli) is installed and updated via uv;
 - Deploy the OpenCode configuration file (`opencode.json`) with customizable model, provider, and permission settings;
 - Deploy an AI agent wrapper script for launching OpenCode with proper environment variables;
-- Deploy managed OpenCode commands (`checkout_pr`, `review_pr`, `refresh`) to the user config directory;
-- Ensure the user's OpenCode skills directory exists for custom skills;
+- Auto-discover and deploy built-in OpenCode commands, with support for disabling specific commands and adding custom ones from external paths;
+- Auto-discover and deploy built-in OpenCode skills, with support for disabling specific skills and adding custom ones from external paths;
+- Optionally clean up specific commands and skills from the target host;
 - Optionally install system-level dependencies (nodejs, npm, uv) when enabled;
 
 Requirements
@@ -46,9 +47,16 @@ Take a look in the Example Playbook section.
 | `ai_small_model` | `anthropic/claude-sonnet-4-5` | Small/fast AI model |
 | `ai_gcp_project` | `your-gcp-project` | GCP project for Vertex AI (see note below) |
 | `ai_vertex_location` | `us-central1` | GCP Vertex AI region (see note below) |
-| `ai_agent_script_name` | `mybuddy` | Name of the wrapper script in `~/bin/` |
+| `ai_agent_script_name` | `skynet` | Name of the wrapper script in `~/bin/` |
 | `ai_opencode_instructions` | `[".specify/memory/constitution.md", "AGENTS.md", "CLAUDE.md"]` | Instruction files for OpenCode |
 | `ai_trusted_github_orgs` | `[]` | Trusted GitHub organizations for command security |
+| `ai_opencode_commands_disabled` | `[]` | Built-in command names to skip (without `.md`) |
+| `ai_opencode_commands_custom` | `[]` | Custom commands to deploy (list of `src`/`name` dicts) |
+| `ai_opencode_skills_disabled` | `[]` | Built-in skill names to skip (directory name) |
+| `ai_opencode_skills_custom` | `[]` | Custom skills to deploy (list of `src`/`name` dicts) |
+| `ai_skills_target` | `agent-neutral` | Skills deploy target: `agent-neutral` or `opencode` |
+| `ai_opencode_commands_cleanup` | `[]` | Command filenames to remove (used by `cleanup_opencode`) |
+| `ai_opencode_skills_cleanup` | `[]` | Skill directory names to remove (used by `cleanup_opencode`) |
 
 ### Google Vertex AI Configuration
 
@@ -79,20 +87,80 @@ ai_trusted_github_orgs:
 When the list is empty (default), the commands will always prompt for confirmation before
 proceeding.
 
-### Custom Commands and Skills
+### Commands
 
-The role deploys managed commands to `~/.config/opencode/command/`. This path is
-OpenCode-specific -- no agent-neutral command directory exists. You can add your own
-command `.md` files alongside the managed ones; the role will not touch files it does
-not manage.
+Built-in commands (`.md` files in `files/commands/`) are **auto-discovered** and deployed
+to `~/.config/opencode/command/`. Adding or removing a command file from the role
+requires no changes to task YAML -- it is picked up automatically.
 
-For custom **skills**, prefer the agent-neutral directory `~/.agents/skills/` over
-`~/.config/opencode/skills/`. OpenCode natively discovers skills from `~/.agents/skills/`
-(via its cross-agent discovery mechanism), and this path is also compatible with Claude Code
-and other agents that follow the `.agents/` convention. This means your custom skills
-will continue to work if you switch AI agents.
+**Disable specific built-in commands** by adding their name (without `.md`) to the blocklist:
 
-Both directories are created by the role automatically.
+```yaml
+ai_opencode_commands_disabled:
+  - checkout_pr       # skip deploying checkout_pr.md
+```
+
+**Deploy custom commands** from local paths (relative to the playbook or absolute):
+
+```yaml
+ai_opencode_commands_custom:
+  - src: ../shared-commands/deploy_staging.md
+  - src: /opt/team/audit.md
+    name: security_audit.md    # optional: override deployed filename
+```
+
+The role will not touch command files it does not manage. If a custom command has the
+same filename as a built-in, the custom version wins (custom deployment runs after
+built-in deployment).
+
+### Skills
+
+Built-in skills (subdirectories in `files/skills/`) are auto-discovered and deployed
+in the same way as commands. The role ships with no built-in skills initially, but the
+infrastructure is ready.
+
+By default, skills are deployed to the **agent-neutral** directory `~/.agents/skills/`.
+OpenCode natively discovers skills from this path, and it is also compatible with
+Claude Code and other agents that follow the `.agents/` convention. To deploy to
+the OpenCode-specific directory instead, set:
+
+```yaml
+ai_skills_target: opencode    # deploys to ~/.config/opencode/skills/
+```
+
+Both directories are always created by the role regardless of the `ai_skills_target` setting.
+
+**Disable specific built-in skills** or **deploy custom skills** the same way as commands:
+
+```yaml
+ai_opencode_skills_disabled:
+  - some-built-in-skill
+
+ai_opencode_skills_custom:
+  - src: ../shared-skills/deploy-workflow
+  - src: /opt/team/review-skill
+    name: team-review          # optional: override deployed directory name
+```
+
+### Cleanup
+
+To remove specific commands or skills from the target host, enable the `cleanup_opencode`
+task and provide names to remove:
+
+```yaml
+ai_tasks:
+  # ... other tasks ...
+  - { enabled: true, name: 'cleanup_opencode' }
+
+ai_opencode_commands_cleanup:
+  - old_command.md
+
+ai_opencode_skills_cleanup:
+  - deprecated-skill
+```
+
+The cleanup task is disabled by default and runs after `configure_opencode` in the
+task order. It uses `state: absent`, so missing files are silently skipped.
 
 ### Commit Standards
 
@@ -131,11 +199,12 @@ Example Playbook
 - hosts: my_linux
   vars:
     ai_tasks:
-      - { enabled: true, name: 'install_dependencies' }
-      - { enabled: true, name: 'install_opencode' }
-      - { enabled: true, name: 'configure_opencode' }
-      - { enabled: true, name: 'install_openspec' }
-      - { enabled: true, name: 'install_speckit' }
+      - { enabled: true,  name: 'install_dependencies' }
+      - { enabled: true,  name: 'install_opencode' }
+      - { enabled: true,  name: 'configure_opencode' }
+      - { enabled: false, name: 'cleanup_opencode' }
+      - { enabled: true,  name: 'install_openspec' }
+      - { enabled: true,  name: 'install_speckit' }
   roles:
     - ansible-role-ai
 ```
@@ -163,8 +232,27 @@ Example Playbook
       - { enabled: false, name: 'install_dependencies' }
       - { enabled: true,  name: 'install_opencode' }
       - { enabled: true,  name: 'configure_opencode' }
+      - { enabled: false, name: 'cleanup_opencode' }
       - { enabled: true,  name: 'install_openspec' }
       - { enabled: false, name: 'install_speckit' }
+  roles:
+    - ansible-role-ai
+```
+
+**With custom commands and disabled built-ins:**
+
+```yaml
+---
+- hosts: my_linux
+  vars:
+    ai_opencode_commands_disabled:
+      - checkout_pr
+    ai_opencode_commands_custom:
+      - src: shared-commands/deploy_staging.md
+      - src: shared-commands/run_migrations.md
+        name: migrate.md
+    ai_opencode_skills_custom:
+      - src: shared-skills/deploy-workflow
   roles:
     - ansible-role-ai
 ```

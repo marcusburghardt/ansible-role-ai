@@ -8,6 +8,7 @@
       - {enabled: false, name: 'install_dependencies'}
       - {enabled: false, name: 'install_opencode'}
       - {enabled: true, name: 'configure_opencode'}
+      - {enabled: false, name: 'cleanup_opencode'}
       - {enabled: false, name: 'install_openspec'}
       - {enabled: false, name: 'install_speckit'}
   roles:
