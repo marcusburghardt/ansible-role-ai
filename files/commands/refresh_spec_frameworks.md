@@ -33,3 +33,12 @@ Detect which spec-driven development framework is initialized in the current rep
    > Run `openspec init` or `specify init` to set one up.
 
 4. **Show a summary** of what was refreshed and the CLI version used.
+
+### Next Steps
+
+After refreshing framework artifacts, suggest the most relevant next actions:
+
+- "Run `git diff` to review what changed in the refreshed artifacts."
+- "If changes are meaningful, commit them: `git add .opencode/ && git commit -s -m 'chore: refresh framework artifacts to latest CLI version'`"
+- "If no changes were made, the artifacts were already up to date."
+- "Run `/workflow_next` to see what else needs attention."

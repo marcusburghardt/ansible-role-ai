@@ -339,3 +339,13 @@ I will prepare the comments and show them to you for approval before posting any
    - **edit**: Let the user modify comments before posting, then re-confirm
 
 4. **CRITICAL RULE**: NEVER post comments without explicit human confirmation. Always show the exact content that will be posted and wait for approval.
+
+### Next Steps
+
+After the review is complete, suggest the most relevant next action based on the outcome:
+
+- **If findings were CRITICAL or HIGH**: "Run `/checkout_pr <PR_NUMBER>` to test locally and investigate the findings in context."
+- **If findings were MEDIUM or LOW only**: "Consider approving if the findings are acceptable: `gh pr review <PR_NUMBER> --approve`"
+- **If no findings**: "No issues found. Approve the PR: `gh pr review <PR_NUMBER> --approve`"
+- **If pre-existing CI failures were found**: "A fix branch was offered in Step 8. Review it with `git log fix/ci-<name>` if created."
+- **In all cases**: "Run `/workflow_next` to see what else needs attention."

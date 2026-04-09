@@ -28,3 +28,14 @@ Follow these exact steps:
 5. After checkout, show a short summary: the current branch name, the latest commit on it, and confirm whether it was a fresh checkout or an update.
 
 Do NOT create commits, do NOT push anything. This is a read-only review operation.
+
+### Next Steps
+
+After the PR is checked out, suggest the most relevant next actions:
+
+- "Run `/review_pr $ARGUMENTS` for a full AI-assisted review of this PR."
+- If a `Makefile` exists: "Run local tests: `make test` (or `make lint` for lint checks)."
+- If `go.mod` exists: "Run Go tests: `go test ./...`"
+- If `pyproject.toml` or `setup.py` exists: "Run Python tests: `pytest`"
+- "When done, switch back to main: `git checkout main`"
+- "Run `/workflow_next` to see what else needs attention."
