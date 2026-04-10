@@ -1,0 +1,17 @@
+---
+_cursor_download_base_url: "https://api2.cursor.sh/updates/download/golden"
+
+_cursor_platform_map:
+  rpm:
+    x86_64: linux-x64-rpm
+    aarch64: linux-arm64-rpm
+  deb:
+    x86_64: linux-x64-deb
+    aarch64: linux-arm64-deb
+  appimage:
+    x86_64: linux-x64
+    aarch64: linux-arm64
+
+_cursor_method_map:
+  RedHat: rpm
+  Debian: deb

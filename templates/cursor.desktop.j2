@@ -1,0 +1,17 @@
+[Desktop Entry]
+Name=Cursor
+Comment=Cursor - The AI Code Editor
+GenericName=Code Editor
+Exec={{ ai_cursor_appimage_dir }}/cursor.AppImage --no-sandbox %F
+Icon=text-editor
+Type=Application
+StartupNotify=true
+StartupWMClass=Cursor
+Categories=Development;IDE;TextEditor;
+MimeType=text/plain;inode/directory;
+Actions=new-empty-window;
+
+[Desktop Action new-empty-window]
+Name=New Empty Window
+Exec={{ ai_cursor_appimage_dir }}/cursor.AppImage --no-sandbox --new-window %F
+Icon=text-editor

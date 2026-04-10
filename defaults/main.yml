@@ -7,6 +7,7 @@ ai_tasks:
   - { enabled: false, name: 'cleanup_opencode' }
   - { enabled: true, name: 'install_openspec' }
   - { enabled: true, name: 'install_speckit' }
+  - { enabled: false, name: 'install_cursor' }
 
 # User directories
 ai_user_home_dir: "{{ ansible_facts['user_dir'] }}"
@@ -84,6 +85,16 @@ ai_opencode_skills_custom: []
 #   "agent-neutral"  => ~/.agents/skills/  (works with any AI agent)
 #   "opencode"       => ~/.config/opencode/skills/  (OpenCode only)
 ai_skills_target: agent-neutral
+
+# Cursor IDE installation (disabled by default)
+# Version: "latest" to track the newest release, or a major.minor version
+# (e.g., "3.0") to pin. The full version is resolved from the Cursor API.
+ai_cursor_version: latest
+# Install method: "auto" detects from OS family (RedHat->rpm, Debian->deb,
+# other->appimage). Override with "rpm", "deb", or "appimage".
+ai_cursor_install_method: auto
+# Directory for AppImage binary (only used when install method is appimage)
+ai_cursor_appimage_dir: "{{ ai_user_home_dir }}/.local/bin"
 
 # Cleanup (used by cleanup_opencode task, disabled by default in ai_tasks)
 # Remove specific commands/skills from the target host by name.
