@@ -29,6 +29,10 @@ ai_openspec_version: latest
 ai_speckit_version: latest
 
 # Ollama settings
+# Install method: "auto" detects from OS family (RedHat/Debian -> package,
+# other -> script). Override with "package" or "script".
+ai_ollama_install_method: auto
+
 # Service lifecycle: "started" runs now, "stopped" installs only.
 # "enabled" controls whether the service persists across reboots.
 ai_ollama_service_enabled: false

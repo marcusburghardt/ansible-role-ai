@@ -44,6 +44,7 @@ Take a look in the Example Playbook section.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ai_tasks` | See defaults | List of sub-tasks with `enabled` flags |
+| `ai_ollama_install_method` | `auto` | Install method: `auto`, `package`, or `script` |
 | `ai_ollama_service_enabled` | `false` | Enable Ollama service to persist across reboots |
 | `ai_ollama_service_state` | `started` | Ollama service runtime state (`started` or `stopped`) |
 | `ai_ollama_models` | See defaults | Curated list of models to pull (with `enabled` flags) |
@@ -74,8 +75,23 @@ Take a look in the Example Playbook section.
 ### Ollama (Local Models)
 
 Ollama is **enabled by default**, giving every user a working OpenCode setup at zero cost.
-The role installs Ollama via the official install script, manages the systemd service, and
-pulls models from a curated list.
+The role installs Ollama, manages the systemd service, and pulls models from a curated list.
+
+**Install method:**
+
+By default (`ai_ollama_install_method: auto`), the role detects the OS family and uses the
+native package manager when available:
+
+| Method | When used | How it installs |
+|--------|-----------|-----------------|
+| `package` | RedHat/Fedora, Debian/Ubuntu (auto-detected) | `dnf install ollama` / `apt install ollama` |
+| `script` | Other distros (fallback) | Official install script from `ollama.com` |
+
+You can force a specific method by overriding the variable:
+
+```yaml
+ai_ollama_install_method: script    # force install script on any distro
+```
 
 **Service lifecycle:**
 

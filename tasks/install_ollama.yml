@@ -1,32 +1,59 @@
 ---
-# Check if Ollama is already installed (idempotency guard)
+# Resolve install method: auto-detect from OS family or use explicit override
+- name: "{{ role_name }} | {{ task.name }} | Resolve install method"
+  ansible.builtin.set_fact:
+    _ollama_resolved_method: >-
+      {{ (ai_ollama_install_method == 'auto')
+         | ternary(_ollama_method_map[ansible_facts['os_family']] | default('script'),
+                   ai_ollama_install_method) }}
+
+# Check if Ollama is already installed (handles both /usr/bin and /usr/local/bin)
 - name: "{{ role_name }} | {{ task.name }} | Check if Ollama is already installed"
-  ansible.builtin.stat:
-    path: /usr/local/bin/ollama
-  register: _ollama_installed
-
-# Download and run the official Ollama install script
-- name: "{{ role_name }} | {{ task.name }} | Download Ollama install script"
-  ansible.builtin.get_url:
-    url: https://ollama.ai/install.sh
-    dest: /tmp/ollama-install.sh
-    mode: "0755"
-  when: not _ollama_installed.stat.exists
-
-- name: "{{ role_name }} | {{ task.name }} | Run Ollama install script"
-  become: true
   ansible.builtin.command:
-    cmd: /tmp/ollama-install.sh
-    creates: /usr/local/bin/ollama
-  when: not _ollama_installed.stat.exists
+    cmd: which ollama
+  register: _ollama_which
+  changed_when: false
+  failed_when: false
 
-- name: "{{ role_name }} | {{ task.name }} | Clean up install script"
-  ansible.builtin.file:
-    path: /tmp/ollama-install.sh
-    state: absent
-  when: not _ollama_installed.stat.exists
+- name: "{{ role_name }} | {{ task.name }} | Report install method"
+  ansible.builtin.debug:
+    msg: "Ollama install method: {{ _ollama_resolved_method }} (already installed: {{ _ollama_which.rc == 0 }})"
 
-# Manage the Ollama systemd service
+# Method: package (native OS package manager)
+- name: "{{ role_name }} | {{ task.name }} | Install Ollama via native package manager"
+  become: true
+  ansible.builtin.package:
+    name: ollama
+    state: present
+  when:
+    - _ollama_resolved_method == 'package'
+    - _ollama_which.rc != 0
+
+# Method: script (official install script fallback)
+- name: "{{ role_name }} | {{ task.name }} | Install Ollama via official install script"
+  when:
+    - _ollama_resolved_method == 'script'
+    - _ollama_which.rc != 0
+  block:
+    - name: "{{ role_name }} | {{ task.name }} | Download Ollama install script"
+      ansible.builtin.get_url:
+        url: https://ollama.com/install.sh
+        dest: /tmp/ollama-install.sh
+        mode: "0755"
+
+    - name: "{{ role_name }} | {{ task.name }} | Run Ollama install script"
+      become: true
+      ansible.builtin.command:
+        cmd: /tmp/ollama-install.sh
+      register: _ollama_script_result
+      changed_when: _ollama_script_result.rc == 0
+
+    - name: "{{ role_name }} | {{ task.name }} | Clean up install script"
+      ansible.builtin.file:
+        path: /tmp/ollama-install.sh
+        state: absent
+
+# Manage the Ollama systemd service (same for both methods)
 - name: "{{ role_name }} | {{ task.name }} | Manage Ollama systemd service"
   become: true
   ansible.builtin.systemd_service:

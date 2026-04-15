@@ -33,24 +33,31 @@ variable files.
 
 ## Decisions
 
-### D1: Ollama installation via official install script
+### D1: Multi-method Ollama installation with OS-aware auto-detection
 
-**Decision**: Use the official `https://ollama.ai/install.sh` script for installation.
+**Decision**: Prefer native OS packages (dnf/apt) when available, fall back to the
+official install script on distros without Ollama packages. Controlled by
+`ai_ollama_install_method` (default: `auto`) following the same pattern as Cursor's
+`ai_cursor_install_method`.
 
-**Rationale**: The script handles OS detection, binary download, systemd service setup,
-and GPU driver compatibility checks. It is idempotent (re-running upgrades safely). Using
-it avoids maintaining OS-specific package repository logic that would duplicate what the
-script already does.
+**Rationale**: Native packages integrate with the system's package manager (tracked
+dependencies, standard updates via `dnf update`, clean uninstall). The install script
+bypasses all of this -- it downloads a binary tarball and manually creates systemd units.
+On distros like Fedora where `dnf install ollama` works, the package manager is the
+correct tool. The script remains as a fallback for distros without native packages.
 
 **Alternatives considered**:
-- *OS package managers (dnf/apt)*: Ollama is not in standard repos for most distros.
-  COPR/PPA availability is inconsistent. Would require maintaining repo definitions per
-  distro.
-- *Direct binary download*: Skips the systemd service setup and GPU detection that the
-  install script provides for free.
+- *Install script only (original approach)*: Works everywhere but bypasses system package
+  management entirely. Binary goes to `/usr/local/bin/` instead of `/usr/bin/`, systemd
+  unit is manually created instead of package-managed.
+- *Package only*: Cleanest but fails on distros without Ollama in their repos.
 
-**Implementation**: Download the script to a temp file, execute it with `become: true`,
-use `creates: /usr/local/bin/ollama` for idempotency.
+**Implementation**: A `_ollama_method_map` in `vars/install_ollama.yml` maps OS families
+to install methods (RedHat: `package`, Debian: `package`). The `auto` method resolves via
+this map with `script` as the default fallback. The user can override with
+`ai_ollama_install_method: script` (or `package`) to force a specific method. The
+idempotency check uses `which ollama` to handle both `/usr/bin/ollama` (package) and
+`/usr/local/bin/ollama` (script) locations.
 
 ### D2: Two separate tasks for install and configure
 
@@ -139,8 +146,9 @@ providers override these in their playbooks.
   example playbook snippets for Vertex-only and mixed setups.
 
 - **[Ollama install script is a third-party dependency]** → The script URL could change or
-  break. Mitigation: use `creates:` for idempotency so failures only affect first-run
-  installs. The script is maintained by the Ollama team and widely used.
+  break. Mitigation: the script is only used as a fallback on distros without native
+  packages. On RedHat/Debian families, the native package manager is used instead. For
+  the fallback case, the `creates:` guard ensures failures only affect first-run installs.
 
 - **[Model quality varies]** → Open models are less capable than frontier paid models.
   Mitigation: the default `qwen3:8b` is chosen for broad compatibility, not peak

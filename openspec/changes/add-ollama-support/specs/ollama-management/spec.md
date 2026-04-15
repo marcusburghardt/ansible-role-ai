@@ -1,20 +1,39 @@
 ## ADDED Requirements
 
-### Requirement: Install Ollama via official install script
-The role SHALL provide an `install_ollama` sub-task that installs Ollama using the official
-install script from `https://ollama.ai/install.sh`. The task SHALL download the script to
-a temporary file and execute it with `become: true`. The task SHALL be idempotent by using
-the `creates: /usr/local/bin/ollama` guard, skipping execution when the binary already
-exists.
+### Requirement: Install Ollama with OS-aware method selection
+The role SHALL provide an `install_ollama` sub-task that installs Ollama using a method
+determined by `ai_ollama_install_method` (default: `auto`). When set to `auto`, the method
+SHALL be resolved from `_ollama_method_map` keyed by `ansible_facts['os_family']`, falling
+back to `script` for unmapped OS families. The supported methods are `package` (via
+`ansible.builtin.package`) and `script` (via the official install script). The task SHALL
+be idempotent by checking whether the `ollama` binary is already present on the system.
 
-#### Scenario: Install Ollama on a fresh system
-- **WHEN** the `install_ollama` task is enabled and the `/usr/local/bin/ollama` binary does
-  not exist
-- **THEN** the role SHALL download the install script, execute it with privilege escalation,
-  and the `ollama` binary SHALL be present at `/usr/local/bin/ollama` after completion
+#### Scenario: Install Ollama via native package on RedHat family
+- **WHEN** the `install_ollama` task is enabled and `ai_ollama_install_method` is `auto`
+  and the target is a RedHat-family host and Ollama is not installed
+- **THEN** the role SHALL install Ollama using `ansible.builtin.package` with
+  `name: ollama` and `state: present` with `become: true`
+
+#### Scenario: Install Ollama via native package on Debian family
+- **WHEN** the `install_ollama` task is enabled and `ai_ollama_install_method` is `auto`
+  and the target is a Debian-family host and Ollama is not installed
+- **THEN** the role SHALL install Ollama using `ansible.builtin.package` with
+  `name: ollama` and `state: present` with `become: true`
+
+#### Scenario: Install Ollama via install script on unknown OS family
+- **WHEN** the `install_ollama` task is enabled and `ai_ollama_install_method` is `auto`
+  and the target OS family is not in `_ollama_method_map` and Ollama is not installed
+- **THEN** the role SHALL download the official install script, execute it with
+  `become: true`, and the `ollama` binary SHALL be present after completion
+
+#### Scenario: User forces script method on a supported OS
+- **WHEN** the user overrides `ai_ollama_install_method` to `script` on a RedHat-family
+  host
+- **THEN** the role SHALL use the install script instead of the native package manager
 
 #### Scenario: Skip installation when Ollama is already installed
-- **WHEN** the `install_ollama` task is enabled and `/usr/local/bin/ollama` already exists
+- **WHEN** the `install_ollama` task is enabled and the `ollama` binary is already present
+  on the system (at either `/usr/bin/ollama` or `/usr/local/bin/ollama`)
 - **THEN** the role SHALL skip the installation step without error
 
 #### Scenario: Skip Ollama installation when task is disabled

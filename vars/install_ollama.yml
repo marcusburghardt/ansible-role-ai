@@ -1,2 +1,8 @@
 ---
 # vars file for install_ollama task
+
+# Maps OS family to preferred install method.
+# Families not listed here fall back to 'script' (official install script).
+_ollama_method_map:
+  RedHat: package
+  Debian: package

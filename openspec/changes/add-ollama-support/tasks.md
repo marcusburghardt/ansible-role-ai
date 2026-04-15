@@ -27,3 +27,11 @@
 - [x] 4.1 Update `README.md` with Ollama variables, migration guidance for existing users, and example playbook snippets for Ollama-only, Vertex-only, and mixed setups
 - [x] 4.2 Run `ansible-lint` against the role and fix any issues
 - [x] 4.3 Run the smoke test (`tests/test.yml`) to verify the role executes without errors
+
+## 5. Multi-method Ollama Installation
+
+- [x] 5.1 Add `_ollama_method_map` to `vars/install_ollama.yml` (RedHat: package, Debian: package) following `vars/install_cursor.yml` pattern
+- [x] 5.2 Add `ai_ollama_install_method` variable to `defaults/main.yml` (default: `auto`)
+- [x] 5.3 Rewrite `tasks/install_ollama.yml` -- resolve method from map, check if already installed via `which`, branch to package or script install, keep systemd management unchanged
+- [x] 5.4 Update `README.md` Ollama section with install method documentation
+- [x] 5.5 Run `ansible-lint` and smoke test to verify

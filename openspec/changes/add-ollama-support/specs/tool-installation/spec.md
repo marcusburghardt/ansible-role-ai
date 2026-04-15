@@ -2,10 +2,11 @@
 
 ### Requirement: Install Ollama as a managed tool
 The role SHALL provide an `install_ollama` entry in `ai_tasks`, enabled by default. The
-task file `tasks/install_ollama.yml` SHALL handle downloading and executing the official
-Ollama install script and managing the systemd service. A corresponding
-`vars/install_ollama.yml` file SHALL exist (even if initially empty) to satisfy the
-role's dispatcher pattern that loads per-task variable files.
+task file `tasks/install_ollama.yml` SHALL handle installing Ollama via OS-aware method
+selection (native package or install script) and managing the systemd service. A
+corresponding `vars/install_ollama.yml` file SHALL contain the `_ollama_method_map` that
+maps OS families to install methods, following the same pattern as
+`vars/install_cursor.yml`.
 
 #### Scenario: install_ollama is enabled by default in ai_tasks
 - **WHEN** examining the default `ai_tasks` list in `defaults/main.yml`
@@ -13,8 +14,8 @@ role's dispatcher pattern that loads per-task variable files.
 
 #### Scenario: Dispatcher loads install_ollama vars and tasks
 - **WHEN** the `install_ollama` task is enabled and the role runs
-- **THEN** the dispatcher SHALL load `vars/install_ollama.yml` and include
-  `tasks/install_ollama.yml`
+- **THEN** the dispatcher SHALL load `vars/install_ollama.yml` (including
+  `_ollama_method_map`) and include `tasks/install_ollama.yml`
 
 #### Scenario: install_ollama can be disabled
 - **WHEN** the user overrides `ai_tasks` to set `install_ollama` to `enabled: false`
@@ -41,9 +42,14 @@ pattern.
   models
 
 ### Requirement: Ollama installation does not require privilege escalation for model pulling
-The `install_ollama` task SHALL use `become: true` for executing the install script
-(system-level operation). The `configure_ollama` task SHALL NOT use `become: true` because
-`ollama pull` operates against the local Ollama service as a regular user.
+The `install_ollama` task SHALL use `become: true` for both install methods (package
+install and install script are both system-level operations). The `configure_ollama` task
+SHALL NOT use `become: true` because `ollama pull` operates against the local Ollama
+service as a regular user.
+
+#### Scenario: Package install runs with become
+- **WHEN** the `install_ollama` task installs via native package manager
+- **THEN** the task SHALL run with `become: true`
 
 #### Scenario: Install script runs with become
 - **WHEN** the `install_ollama` task executes the install script
