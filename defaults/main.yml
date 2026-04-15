@@ -2,6 +2,8 @@
 # Role Defaults
 ai_tasks:
   - { enabled: false, name: 'install_dependencies' }
+  - { enabled: true, name: 'install_ollama' }
+  - { enabled: true, name: 'configure_ollama' }
   - { enabled: true, name: 'install_opencode' }
   - { enabled: true, name: 'configure_opencode' }
   - { enabled: false, name: 'cleanup_opencode' }
@@ -26,15 +28,62 @@ ai_openspec_version: latest
 # Available releases: https://github.com/github/spec-kit/releases
 ai_speckit_version: latest
 
+# Ollama settings
+# Service lifecycle: "started" runs now, "stopped" installs only.
+# "enabled" controls whether the service persists across reboots.
+ai_ollama_service_enabled: false
+ai_ollama_service_state: started
+
+# Curated model list: override in playbook to enable/disable models.
+# Only enabled models are pulled during configure_ollama.
+ai_ollama_models:
+  - { enabled: true, name: 'qwen3:8b' }
+  - { enabled: false, name: 'qwen3:32b' }
+  - { enabled: false, name: 'devstral' }
+  - { enabled: false, name: 'qwen3-coder:a3b' }
+  - { enabled: false, name: 'llama3.1:8b' }
+
 # AI Model settings
-ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
-ai_small_model: "anthropic/claude-sonnet-4-5"
+# Defaults to Ollama for a zero-cost out-of-box experience.
+# Override to use paid providers (e.g., "google-vertex-anthropic/claude-opus-4-6@default").
+ai_model: "ollama/qwen3:8b"
+ai_small_model: "ollama/qwen3:8b"
 
 # GCP settings for AI model access
-# Set these to your real values when using Google Vertex AI as the provider.
-# These are harmlessly ignored when not using Vertex.
+# Only relevant when google-vertex-anthropic is in ai_opencode_providers.
+# Harmlessly ignored otherwise.
 ai_gcp_project: "your-gcp-project"
 ai_vertex_location: "us-central1"
+
+# OpenCode provider configuration
+# Models from Ollama visible in OpenCode (independent of the pull list above).
+# Maps Ollama model names to their display configuration.
+ai_opencode_ollama_models:
+  qwen3:8b:
+    name: "Qwen 3 8B (local)"
+
+# Full provider catalog for OpenCode. This dict is rendered directly into the
+# "provider" block of opencode.json. Add, remove, or customize providers here.
+# The Ollama entry uses a Jinja reference to ai_opencode_ollama_models, which
+# Ansible resolves at template rendering time.
+ai_opencode_providers:
+  ollama:
+    npm: "@ai-sdk/openai-compatible"
+    name: "Ollama (local)"
+    options:
+      baseURL: "http://localhost:11434/v1"
+    models: "{{ ai_opencode_ollama_models }}"
+  google-vertex-anthropic:
+    models:
+      claude-opus-4-6@default:
+        options:
+          thinking:
+            type: enabled
+            budgetTokens: 32000
+
+# Providers that OpenCode should not auto-detect. Empty list means no providers
+# are disabled. Override to block specific providers (e.g., ["openai", "gemini"]).
+ai_opencode_disabled_providers: []
 
 # OpenCode configuration
 ai_opencode_config_dir: "{{ ai_user_home_dir }}/.config/opencode"

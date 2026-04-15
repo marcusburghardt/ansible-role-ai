@@ -6,6 +6,8 @@ according to user preferences. Settings can be customized through variables. Tak
 in the existing defaults defined in `defaults/main.yml` and override them in a Playbook.
 
 This role will:
+- Install and manage Ollama for running open models locally (enabled by default);
+- Pull a curated selection of open models via Ollama (default: `qwen3:8b`);
 - Ensure OpenCode (opencode-ai) is installed and updated via npm;
 - Ensure OpenSPEC (@fission-ai/openspec) is installed and updated via npm;
 - Ensure SpecKit (specify-cli) is installed and updated via uv;
@@ -23,6 +25,7 @@ Requirements
 - `community.general` Ansible collection (for `community.general.npm` module)
 - `npm` / `nodejs` on the target host (or enable `install_dependencies` task)
 - `uv` on the target host (or enable `install_dependencies` task)
+- `curl` on the target host (for Ollama install script, when `install_ollama` is enabled)
 
 Role Variables
 --------------
@@ -41,11 +44,17 @@ Take a look in the Example Playbook section.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ai_tasks` | See defaults | List of sub-tasks with `enabled` flags |
+| `ai_ollama_service_enabled` | `false` | Enable Ollama service to persist across reboots |
+| `ai_ollama_service_state` | `started` | Ollama service runtime state (`started` or `stopped`) |
+| `ai_ollama_models` | See defaults | Curated list of models to pull (with `enabled` flags) |
 | `ai_opencode_version` | `latest` | OpenCode version (`latest` or pinned, e.g., `1.2.3`) |
 | `ai_openspec_version` | `latest` | OpenSPEC version (`latest` or pinned) |
 | `ai_speckit_version` | `latest` | SpecKit version (`latest` or pinned tag, e.g., `v0.4.4`) |
-| `ai_model` | `google-vertex-anthropic/claude-opus-4-6@default` | Primary AI model |
-| `ai_small_model` | `anthropic/claude-sonnet-4-5` | Small/fast AI model |
+| `ai_model` | `ollama/qwen3:8b` | Primary AI model |
+| `ai_small_model` | `ollama/qwen3:8b` | Small/fast AI model |
+| `ai_opencode_providers` | See defaults | Provider catalog for OpenCode (rendered into `opencode.json`) |
+| `ai_opencode_ollama_models` | See defaults | Ollama models visible in OpenCode (subset of pulled models) |
+| `ai_opencode_disabled_providers` | `[]` | Providers that OpenCode should not auto-detect |
 | `ai_gcp_project` | `your-gcp-project` | GCP project for Vertex AI (see note below) |
 | `ai_vertex_location` | `us-central1` | GCP Vertex AI region (see note below) |
 | `ai_agent_script_name` | `skynet` | Name of the wrapper script in `~/bin/` |
@@ -62,6 +71,76 @@ Take a look in the Example Playbook section.
 | `ai_cursor_install_method` | `auto` | Install format: `auto`, `rpm`, `deb`, or `appimage` |
 | `ai_cursor_appimage_dir` | `~/.local/bin` | Directory for AppImage binary (AppImage method only) |
 
+### Ollama (Local Models)
+
+Ollama is **enabled by default**, giving every user a working OpenCode setup at zero cost.
+The role installs Ollama via the official install script, manages the systemd service, and
+pulls models from a curated list.
+
+**Service lifecycle:**
+
+| `ai_ollama_service_enabled` | `ai_ollama_service_state` | Behavior |
+|-----------------------------|---------------------------|----------|
+| `false` (default) | `started` (default) | Runs now, gone after reboot |
+| `true` | `started` | Runs now, auto-starts on boot |
+| `false` | `stopped` | Installed but not running |
+| `true` | `stopped` | Will start on next boot, not now |
+
+**Model selection:**
+
+The default curated list enables only `qwen3:8b` (~5 GB, runs on virtually any modern
+hardware). Enable additional models in your playbook:
+
+```yaml
+ai_ollama_models:
+  - { enabled: true, name: 'qwen3:8b' }
+  - { enabled: true, name: 'qwen3:32b' }      # strong all-round (~20 GB VRAM)
+  - { enabled: false, name: 'devstral' }        # Mistral code model (~15 GB VRAM)
+  - { enabled: false, name: 'qwen3-coder:a3b' } # MoE code specialist (~20 GB VRAM)
+  - { enabled: false, name: 'llama3.1:8b' }     # Meta general model (~5 GB VRAM)
+```
+
+Models are only pulled when the Ollama service is running. If you set
+`ai_ollama_service_state: stopped`, model pulls are gracefully skipped.
+
+**OpenCode-visible models:**
+
+By default, all enabled models appear in OpenCode. To control which pulled models are
+visible in the OpenCode `/models` picker, override `ai_opencode_ollama_models`:
+
+```yaml
+ai_opencode_ollama_models:
+  qwen3:8b:
+    name: "Qwen 3 8B (local)"
+  qwen3:32b:
+    name: "Qwen 3 32B (local)"
+```
+
+### Provider Configuration
+
+The OpenCode provider catalog is fully data-driven via the `ai_opencode_providers`
+variable. By default, both Ollama and Google Vertex Anthropic are configured. Override
+this variable to add, remove, or customize providers:
+
+```yaml
+# Ollama-only setup (remove Vertex entirely)
+ai_opencode_providers:
+  ollama:
+    npm: "@ai-sdk/openai-compatible"
+    name: "Ollama (local)"
+    options:
+      baseURL: "http://localhost:11434/v1"
+    models: "{{ ai_opencode_ollama_models }}"
+```
+
+To prevent OpenCode from auto-detecting unconfigured providers:
+
+```yaml
+ai_opencode_disabled_providers:
+  - openai
+  - gemini
+```
+
 ### Google Vertex AI Configuration
 
 If you are using Google Vertex AI as the model provider, you **must** set the following
@@ -70,11 +149,45 @@ variables to your real values in your playbook:
 ```yaml
 ai_gcp_project: "my-actual-gcp-project"
 ai_vertex_location: "us-east5"
+ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
+ai_small_model: "anthropic/claude-sonnet-4-5"
 ```
 
-If you are **not** using Vertex AI (e.g., using a direct Anthropic API key), these variables
-are harmlessly ignored -- the wrapper script exports them as environment variables, but
-OpenCode only reads them when the provider is `google-vertex-anthropic`.
+If you are **not** using Vertex AI, these variables are harmlessly ignored. The wrapper
+script only exports GCP environment variables when `google-vertex-anthropic` is present
+in `ai_opencode_providers`.
+
+### Migration from Previous Versions
+
+Previous versions of this role defaulted to `google-vertex-anthropic` as the primary
+provider with hardcoded provider configuration. If you are upgrading, note:
+
+- **`ai_model`** now defaults to `ollama/qwen3:8b` instead of
+  `google-vertex-anthropic/claude-opus-4-6@default`
+- **`ai_small_model`** now defaults to `ollama/qwen3:8b` instead of
+  `anthropic/claude-sonnet-4-5`
+- **Provider block** in `opencode.json` is now driven by `ai_opencode_providers`
+  instead of being hardcoded
+- **`disabled_providers`** is now driven by `ai_opencode_disabled_providers` (defaults
+  to empty instead of `["openai", "gemini"]`)
+
+To restore the previous Vertex-only behavior:
+
+```yaml
+ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
+ai_small_model: "anthropic/claude-sonnet-4-5"
+ai_opencode_disabled_providers: ["openai", "gemini"]
+ai_tasks:
+  - { enabled: false, name: 'install_dependencies' }
+  - { enabled: false, name: 'install_ollama' }
+  - { enabled: false, name: 'configure_ollama' }
+  - { enabled: true,  name: 'install_opencode' }
+  - { enabled: true,  name: 'configure_opencode' }
+  - { enabled: false, name: 'cleanup_opencode' }
+  - { enabled: true,  name: 'install_openspec' }
+  - { enabled: true,  name: 'install_speckit' }
+  - { enabled: false, name: 'install_cursor' }
+```
 
 ### Trusted GitHub Organizations
 
@@ -230,12 +343,49 @@ Example Playbook
   vars:
     ai_tasks:
       - { enabled: true,  name: 'install_dependencies' }
+      - { enabled: true,  name: 'install_ollama' }
+      - { enabled: true,  name: 'configure_ollama' }
       - { enabled: true,  name: 'install_opencode' }
       - { enabled: true,  name: 'configure_opencode' }
       - { enabled: false, name: 'cleanup_opencode' }
       - { enabled: true,  name: 'install_openspec' }
       - { enabled: true,  name: 'install_speckit' }
       - { enabled: false, name: 'install_cursor' }
+  roles:
+    - ansible-role-ai
+```
+
+**With Vertex AI as primary provider (paid setup):**
+
+```yaml
+---
+- hosts: my_linux
+  vars:
+    ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
+    ai_small_model: "anthropic/claude-sonnet-4-5"
+    ai_gcp_project: "my-gcp-project"
+    ai_vertex_location: "us-east5"
+  roles:
+    - ansible-role-ai
+```
+
+**With larger Ollama models for beefy GPU:**
+
+```yaml
+---
+- hosts: my_linux
+  vars:
+    ai_ollama_models:
+      - { enabled: true, name: 'qwen3:8b' }
+      - { enabled: true, name: 'qwen3:32b' }
+    ai_opencode_ollama_models:
+      qwen3:8b:
+        name: "Qwen 3 8B (local)"
+      qwen3:32b:
+        name: "Qwen 3 32B (local)"
+    ai_model: "ollama/qwen3:32b"
+    ai_small_model: "ollama/qwen3:8b"
+    ai_ollama_service_enabled: true
   roles:
     - ansible-role-ai
 ```
@@ -253,7 +403,7 @@ Example Playbook
     - ansible-role-ai
 ```
 
-**With selective tasks (OpenCode only, no SpecKit):**
+**With selective tasks (OpenCode only, no SpecKit, no Ollama):**
 
 ```yaml
 ---
@@ -261,6 +411,8 @@ Example Playbook
   vars:
     ai_tasks:
       - { enabled: false, name: 'install_dependencies' }
+      - { enabled: false, name: 'install_ollama' }
+      - { enabled: false, name: 'configure_ollama' }
       - { enabled: true,  name: 'install_opencode' }
       - { enabled: true,  name: 'configure_opencode' }
       - { enabled: false, name: 'cleanup_opencode' }
@@ -279,6 +431,8 @@ Example Playbook
   vars:
     ai_tasks:
       - { enabled: false, name: 'install_dependencies' }
+      - { enabled: true,  name: 'install_ollama' }
+      - { enabled: true,  name: 'configure_ollama' }
       - { enabled: true,  name: 'install_opencode' }
       - { enabled: true,  name: 'configure_opencode' }
       - { enabled: false, name: 'cleanup_opencode' }
@@ -299,6 +453,8 @@ Example Playbook
     ai_cursor_install_method: appimage    # force AppImage regardless of OS
     ai_tasks:
       - { enabled: false, name: 'install_dependencies' }
+      - { enabled: true,  name: 'install_ollama' }
+      - { enabled: true,  name: 'configure_ollama' }
       - { enabled: true,  name: 'install_opencode' }
       - { enabled: true,  name: 'configure_opencode' }
       - { enabled: false, name: 'cleanup_opencode' }

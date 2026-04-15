@@ -2,8 +2,10 @@
 # "{{ ai_agent_script_name }}" is a simple script that helps to start AI agents.
 # It is a wrapper around the AI agents and it helps to start the AI agents in a similar way.
 
+{% if 'google-vertex-anthropic' in ai_opencode_providers %}
 export GCP_PROJECT="{{ ai_gcp_project }}"
 export VERTEX_LOCATION="{{ ai_vertex_location }}"
+{% endif %}
 export TRUSTED_GITHUB_ORGS="{{ ai_trusted_github_orgs | join(',') }}"
 
 # Start the AI agent

@@ -6,6 +6,8 @@
   vars:
     ai_tasks:
       - {enabled: false, name: 'install_dependencies'}
+      - {enabled: false, name: 'install_ollama'}
+      - {enabled: false, name: 'configure_ollama'}
       - {enabled: false, name: 'install_opencode'}
       - {enabled: true, name: 'configure_opencode'}
       - {enabled: false, name: 'cleanup_opencode'}

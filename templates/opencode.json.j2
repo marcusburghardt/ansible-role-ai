@@ -4,21 +4,8 @@
     "small_model": "{{ ai_small_model }}",
     "autoupdate": "notify",
     "share": "manual",
-    "provider": {
-      "google-vertex-anthropic": {
-        "models": {
-          "claude-opus-4-6@default": {
-            "options": {
-              "thinking": {
-                "type": "enabled",
-                "budgetTokens": 32000
-              }
-            }
-          }
-        }
-      }
-    },
-    "disabled_providers": ["openai", "gemini"],
+    "provider": {{ ai_opencode_providers | to_json }},
+    "disabled_providers": {{ ai_opencode_disabled_providers | to_json }},
     "permission": {
       "bash": {
         "*": "ask",
@@ -26,8 +13,11 @@
         "ansible-lint": "allow",
         "echo *": "allow",
         "find *": "allow",
-        "gh pr view *": "allow",
+        "gh issue view *": "allow",
+        "gh issue list *": "allow",
+        "gh pr checks *": "allow",
         "gh pr diff *": "allow",
+        "gh pr view *": "allow",
         "gh repo view *": "allow",
         "gh run view *": "allow",
         "git branch*": "allow",
@@ -47,6 +37,7 @@
         "openspec *": "allow",
         "rm *": "ask",
         "test *": "allow",
+        "sort *": "allow",
         "specify *": "allow",
         "wc *": "allow",
         "which *": "allow"

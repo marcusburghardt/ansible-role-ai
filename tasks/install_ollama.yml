@@ -1,0 +1,36 @@
+---
+# Check if Ollama is already installed (idempotency guard)
+- name: "{{ role_name }} | {{ task.name }} | Check if Ollama is already installed"
+  ansible.builtin.stat:
+    path: /usr/local/bin/ollama
+  register: _ollama_installed
+
+# Download and run the official Ollama install script
+- name: "{{ role_name }} | {{ task.name }} | Download Ollama install script"
+  ansible.builtin.get_url:
+    url: https://ollama.ai/install.sh
+    dest: /tmp/ollama-install.sh
+    mode: "0755"
+  when: not _ollama_installed.stat.exists
+
+- name: "{{ role_name }} | {{ task.name }} | Run Ollama install script"
+  become: true
+  ansible.builtin.command:
+    cmd: /tmp/ollama-install.sh
+    creates: /usr/local/bin/ollama
+  when: not _ollama_installed.stat.exists
+
+- name: "{{ role_name }} | {{ task.name }} | Clean up install script"
+  ansible.builtin.file:
+    path: /tmp/ollama-install.sh
+    state: absent
+  when: not _ollama_installed.stat.exists
+
+# Manage the Ollama systemd service
+- name: "{{ role_name }} | {{ task.name }} | Manage Ollama systemd service"
+  become: true
+  ansible.builtin.systemd_service:
+    name: ollama
+    state: "{{ ai_ollama_service_state }}"
+    enabled: "{{ ai_ollama_service_enabled }}"
+    daemon_reload: true
