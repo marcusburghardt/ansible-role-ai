@@ -1,0 +1,14 @@
+[Unit]
+Description=Ollama Service
+After=network-online.target
+
+[Service]
+ExecStart={{ _ollama_bin_path }} serve
+User=ollama
+Group=ollama
+Restart=always
+RestartSec=3
+Environment="PATH={{ ansible_env.PATH }}"
+
+[Install]
+WantedBy=default.target

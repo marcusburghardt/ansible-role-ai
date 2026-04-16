@@ -7,6 +7,10 @@
          | ternary(_ollama_method_map[ansible_facts['os_family']] | default('script'),
                    ai_ollama_install_method) }}
 
+- name: "{{ role_name }} | {{ task.name }} | Resolve binary path"
+  ansible.builtin.set_fact:
+    _ollama_bin_path: "{{ _ollama_bin_map[_ollama_resolved_method | trim] }}"
+
 # Check if Ollama is already installed (handles both /usr/bin and /usr/local/bin)
 - name: "{{ role_name }} | {{ task.name }} | Check if Ollama is already installed"
   ansible.builtin.command:
@@ -17,7 +21,7 @@
 
 - name: "{{ role_name }} | {{ task.name }} | Report install method"
   ansible.builtin.debug:
-    msg: "Ollama install method: {{ _ollama_resolved_method }} (already installed: {{ _ollama_which.rc == 0 }})"
+    msg: "Ollama install method: {{ _ollama_resolved_method | trim }} (binary: {{ _ollama_bin_path }}, already installed: {{ _ollama_which.rc == 0 }})"
 
 # Method: package (native OS package manager)
 - name: "{{ role_name }} | {{ task.name }} | Install Ollama via native package manager"
@@ -26,13 +30,13 @@
     name: ollama
     state: present
   when:
-    - _ollama_resolved_method == 'package'
+    - _ollama_resolved_method | trim == 'package'
     - _ollama_which.rc != 0
 
-# Method: script (official install script fallback)
+# Method: script (official install script fallback -- creates user, unit, and binary)
 - name: "{{ role_name }} | {{ task.name }} | Install Ollama via official install script"
   when:
-    - _ollama_resolved_method == 'script'
+    - _ollama_resolved_method | trim == 'script'
     - _ollama_which.rc != 0
   block:
     - name: "{{ role_name }} | {{ task.name }} | Download Ollama install script"
@@ -53,7 +57,51 @@
         path: /tmp/ollama-install.sh
         state: absent
 
-# Manage the Ollama systemd service (same for both methods)
+# Ensure the ollama system user and group exist.
+# The install script creates these, but native packages may not.
+- name: "{{ role_name }} | {{ task.name }} | Ensure ollama system group exists"
+  become: true
+  ansible.builtin.group:
+    name: ollama
+    system: true
+    state: present
+
+- name: "{{ role_name }} | {{ task.name }} | Ensure ollama system user exists"
+  become: true
+  ansible.builtin.user:
+    name: ollama
+    group: ollama
+    system: true
+    shell: /bin/false
+    home: /usr/share/ollama
+    create_home: true
+    state: present
+
+# Deploy the systemd service unit if one does not exist.
+# The install script creates its own; the package method typically does not.
+- name: "{{ role_name }} | {{ task.name }} | Check if systemd unit exists"
+  ansible.builtin.stat:
+    path: /etc/systemd/system/ollama.service
+  register: _ollama_unit_etc
+
+- name: "{{ role_name }} | {{ task.name }} | Check if package-provided systemd unit exists"
+  ansible.builtin.stat:
+    path: /usr/lib/systemd/system/ollama.service
+  register: _ollama_unit_lib
+
+- name: "{{ role_name }} | {{ task.name }} | Deploy Ollama systemd service unit"
+  become: true
+  ansible.builtin.template:
+    src: ollama.service.j2
+    dest: /etc/systemd/system/ollama.service
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - not _ollama_unit_etc.stat.exists
+    - not _ollama_unit_lib.stat.exists
+
+# Manage the Ollama systemd service
 - name: "{{ role_name }} | {{ task.name }} | Manage Ollama systemd service"
   become: true
   ansible.builtin.systemd_service:
