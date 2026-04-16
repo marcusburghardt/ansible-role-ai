@@ -1,20 +1,13 @@
 ---
-# Check if the Ollama service is running before attempting model pulls
-- name: "{{ role_name }} | {{ task.name }} | Gather service facts"
-  ansible.builtin.service_facts:
-
-- name: "{{ role_name }} | {{ task.name }} | Determine Ollama service state"
-  ansible.builtin.set_fact:
-    _ollama_service_running: >-
-      {{ ansible_facts.services['ollama.service'] is defined
-         and ansible_facts.services['ollama.service'].state == 'running' }}
-
-- name: "{{ role_name }} | {{ task.name }} | Skip model pulls when service is not running"
+# Skip model pulls when the user configured the service to be stopped.
+# If ai_ollama_service_state is 'started', install_ollama already started
+# the service in the preceding task -- no need to re-check system state.
+- name: "{{ role_name }} | {{ task.name }} | Skip model pulls when service is stopped"
   ansible.builtin.debug:
     msg: >-
-      Ollama service is not running. Skipping model pulls. Start the service or
-      set ai_ollama_service_state to 'started' to enable model pulling.
-  when: not _ollama_service_running | bool
+      Ollama service state is '{{ ai_ollama_service_state }}'. Skipping model pulls.
+      Set ai_ollama_service_state to 'started' to enable model pulling.
+  when: ai_ollama_service_state != 'started'
 
 # Pull enabled models from the curated list
 - name: "{{ role_name }} | {{ task.name }} | Pull enabled Ollama models"
@@ -25,4 +18,4 @@
     label: "{{ item.name }}"
   register: _ollama_pull_result
   changed_when: "'pulling' in _ollama_pull_result.stderr | default('')"
-  when: _ollama_service_running | bool
+  when: ai_ollama_service_state == 'started'

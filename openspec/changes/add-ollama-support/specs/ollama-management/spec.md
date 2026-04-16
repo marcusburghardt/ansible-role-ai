@@ -80,11 +80,12 @@ running.
 - **WHEN** `ai_ollama_models` contains multiple entries with `enabled: true`
 - **THEN** the role SHALL pull each enabled model in sequence
 
-#### Scenario: Skip pulls when service is not running
-- **WHEN** the `configure_ollama` task is enabled but the Ollama service is not running
-  (e.g., `ai_ollama_service_state` is `stopped`)
+#### Scenario: Skip pulls when service state is stopped
+- **WHEN** the `configure_ollama` task is enabled but `ai_ollama_service_state` is
+  `stopped`
 - **THEN** the role SHALL skip all model pull operations without error and SHALL display a
-  debug message indicating that pulls were skipped because the service is not running
+  debug message indicating that pulls were skipped because the service state is not
+  `started`
 
 #### Scenario: Skip configure_ollama when task is disabled
 - **WHEN** the `configure_ollama` task entry has `enabled: false` in `ai_tasks`
