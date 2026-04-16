@@ -35,3 +35,13 @@
 - [x] 5.3 Rewrite `tasks/install_ollama.yml` -- resolve method from map, check if already installed via `which`, branch to package or script install, keep systemd management unchanged
 - [x] 5.4 Update `README.md` Ollama section with install method documentation
 - [x] 5.5 Run `ansible-lint` and smoke test to verify
+
+## 6. SELinux Policy for Ollama
+
+- [x] 6.1 Create `files/selinux/ollama.te` with documented confined policy
+- [x] 6.2 Create `files/selinux/ollama.if` interface definitions
+- [x] 6.3 Create `files/selinux/ollama.fc` file context (using `/usr/lib/` path for Fedora equivalency)
+- [x] 6.4 Add `ai_ollama_selinux_policy` variable to `defaults/main.yml` (default: `false`)
+- [x] 6.5 Add SELinux build/install/apply tasks to `tasks/install_ollama.yml` (conditional on variable)
+- [x] 6.6 Update `README.md` with SELinux policy documentation and permission table
+- [x] 6.7 Run `ansible-lint` and smoke test to verify

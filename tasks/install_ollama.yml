@@ -101,6 +101,60 @@
     - not _ollama_unit_etc.stat.exists
     - not _ollama_unit_lib.stat.exists
 
+# Deploy SELinux policy for Ollama.
+# Required on SELinux-enforcing systems where the Ollama package does not
+# ship its own policy. Confines ollama to a dedicated ollama_t domain.
+- name: "{{ role_name }} | {{ task.name }} | Deploy Ollama SELinux policy"
+  when: ai_ollama_selinux_policy | bool
+  become: true
+  block:
+    - name: "{{ role_name }} | {{ task.name }} | Ensure SELinux policy build dependencies"
+      ansible.builtin.package:
+        name:
+          - selinux-policy-devel
+          - policycoreutils-python-utils
+        state: present
+
+    - name: "{{ role_name }} | {{ task.name }} | Create SELinux build directory"
+      ansible.builtin.file:
+        path: /tmp/ollama-selinux
+        state: directory
+        mode: "0755"
+
+    - name: "{{ role_name }} | {{ task.name }} | Copy SELinux policy sources"
+      ansible.builtin.copy:
+        src: "selinux/{{ item }}"
+        dest: "/tmp/ollama-selinux/{{ item }}"
+        mode: "0644"
+      loop:
+        - ollama.te
+        - ollama.if
+        - ollama.fc
+
+    - name: "{{ role_name }} | {{ task.name }} | Build SELinux policy module"
+      community.general.make:
+        chdir: /tmp/ollama-selinux
+        file: /usr/share/selinux/devel/Makefile
+        target: ollama.pp
+
+    - name: "{{ role_name }} | {{ task.name }} | Install SELinux policy module"
+      ansible.builtin.command:
+        cmd: semodule -i /tmp/ollama-selinux/ollama.pp
+      register: _ollama_semodule
+      changed_when: _ollama_semodule.rc == 0
+
+    - name: "{{ role_name }} | {{ task.name }} | Apply file context to Ollama binary"
+      ansible.builtin.command:
+        cmd: restorecon -F -v /usr/lib64/ollama/bin/ollama
+      register: _ollama_restorecon
+      changed_when: "'ollama_exec_t' in _ollama_restorecon.stdout"
+      failed_when: false
+
+    - name: "{{ role_name }} | {{ task.name }} | Clean up SELinux build directory"
+      ansible.builtin.file:
+        path: /tmp/ollama-selinux
+        state: absent
+
 # Manage the Ollama systemd service
 - name: "{{ role_name }} | {{ task.name }} | Manage Ollama systemd service"
   become: true

@@ -33,6 +33,14 @@ ai_speckit_version: latest
 # other -> script). Override with "package" or "script".
 ai_ollama_install_method: auto
 
+# SELinux: deploy a confined policy for the Ollama daemon.
+# Required on SELinux-enforcing systems (e.g., Fedora) where the Ollama
+# package does not ship its own policy. Without it, Ollama runs as init_t
+# and is denied network access for model pulls and API binding.
+# Disabled by default -- enable only on SELinux-enforcing hosts.
+# See files/selinux/ollama.te for the full policy and permission rationale.
+ai_ollama_selinux_policy: false
+
 # Service lifecycle: "started" runs now, "stopped" installs only.
 # "enabled" controls whether the service persists across reboots.
 ai_ollama_service_enabled: false

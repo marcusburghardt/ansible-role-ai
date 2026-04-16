@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# SELinux file context definitions for Ollama.
+#
+# Note: Fedora maps /usr/lib64 to /usr/lib via an equivalency rule.
+# File context paths must use /usr/lib/ (not /usr/lib64/) to match.
+
+/usr/lib/ollama/bin/ollama	--	gen_context(system_u:object_r:ollama_exec_t,s0)

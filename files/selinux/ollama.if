@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# SELinux interface definitions for Ollama.
+
+## <summary>policy for ollama</summary>
+
+########################################
+## <summary>
+##	Execute ollama_exec_t in the ollama domain.
+## </summary>
+## <param name="domain">
+## <summary>
+##	Domain allowed to transition.
+## </summary>
+## </param>
+#
+interface(`ollama_domtrans',`
+	gen_require(`
+		type ollama_t, ollama_exec_t;
+	')
+
+	corecmd_search_bin($1)
+	domtrans_pattern($1, ollama_exec_t, ollama_t)
+')
+
+######################################
+## <summary>
+##	Execute ollama in the caller domain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`ollama_exec',`
+	gen_require(`
+		type ollama_exec_t;
+	')
+
+	corecmd_search_bin($1)
+	can_exec($1, ollama_exec_t)
+')

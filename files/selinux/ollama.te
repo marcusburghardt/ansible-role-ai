@@ -1,0 +1,96 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# SELinux Type Enforcement policy for Ollama.
+#
+# Confines the Ollama daemon (ollama serve) to a dedicated ollama_t domain
+# with only the permissions it needs. Without this policy, Ollama runs as
+# init_t (the generic systemd service context) which is denied outbound
+# network access on SELinux-enforcing systems.
+#
+# What this policy grants:
+#
+#   PERMISSION                          WHY
+#   ──────────────────────────────────  ──────────────────────────────────────
+#   setuid / setgid capabilities        Drop privileges after starting as root
+#   fork                                Spawn worker processes
+#   Inherit systemd file descriptors    Standard for systemd-managed daemons
+#   Read /etc/* files                   resolv.conf, hosts, nsswitch.conf
+#   NSS user/group lookups              Resolve the 'ollama' system user
+#   Read locale data                    Timezone and character encoding
+#   DNS resolution                      Resolve registry.ollama.ai
+#   Bind to generic ports (11434)       Listen for API requests
+#   Listen / accept on TCP sockets      Serve the local API
+#   Connect to HTTP/HTTPS ports         Pull models from registry.ollama.ai
+#   Read /proc/sys/net                  Kernel network configuration
+#   Read /proc/meminfo                  Detect available system memory
+#   Read/write /usr/share/ollama        Model storage directory
+#
+
+policy_module(ollama, 1.0.0)
+
+########################################
+#
+# Declarations
+#
+
+type ollama_t;
+type ollama_exec_t;
+init_daemon_domain(ollama_t, ollama_exec_t)
+
+########################################
+#
+# Process and capabilities
+#
+
+allow ollama_t self:capability { setgid setuid };
+allow ollama_t self:process { fork };
+allow ollama_t self:fifo_file rw_fifo_file_perms;
+allow ollama_t self:unix_stream_socket create_stream_socket_perms;
+
+########################################
+#
+# System integration
+#
+
+# Inherit file descriptors from systemd
+domain_use_interactive_fds(ollama_t)
+
+# Read configuration files (/etc/hosts, /etc/resolv.conf, etc.)
+files_read_etc_files(ollama_t)
+
+# NSS lookups for user/group resolution
+auth_use_nsswitch(ollama_t)
+
+# Locale and timezone data
+miscfiles_read_localization(ollama_t)
+
+# Read /proc/sys/net (kernel network parameters)
+kernel_read_net_sysctls(ollama_t)
+
+# Read /proc/meminfo (memory detection)
+kernel_read_system_state(ollama_t)
+
+########################################
+#
+# Network
+#
+
+# DNS resolution for registry.ollama.ai
+sysnet_dns_name_resolve(ollama_t)
+
+# Bind to port 11434 (Ollama API)
+corenet_tcp_bind_generic_port(ollama_t)
+
+# Listen and accept connections on the API socket
+allow ollama_t self:tcp_socket { listen accept };
+
+# Outbound HTTPS to registry.ollama.ai for model pulls
+corenet_tcp_connect_http_port(ollama_t)
+
+########################################
+#
+# Model storage (/usr/share/ollama)
+#
+
+manage_files_pattern(ollama_t, usr_t, usr_t)
+manage_dirs_pattern(ollama_t, usr_t, usr_t)

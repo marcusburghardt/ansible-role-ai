@@ -45,6 +45,7 @@ Take a look in the Example Playbook section.
 |----------|---------|-------------|
 | `ai_tasks` | See defaults | List of sub-tasks with `enabled` flags |
 | `ai_ollama_install_method` | `auto` | Install method: `auto`, `package`, or `script` |
+| `ai_ollama_selinux_policy` | `false` | Deploy confined SELinux policy for Ollama (see below) |
 | `ai_ollama_service_enabled` | `false` | Enable Ollama service to persist across reboots |
 | `ai_ollama_service_state` | `started` | Ollama service runtime state (`started` or `stopped`) |
 | `ai_ollama_models` | See defaults | Curated list of models to pull (with `enabled` flags) |
@@ -92,6 +93,35 @@ You can force a specific method by overriding the variable:
 ```yaml
 ai_ollama_install_method: script    # force install script on any distro
 ```
+
+**SELinux policy (disabled by default):**
+
+On SELinux-enforcing systems (e.g., Fedora), the Ollama package does not ship its own
+SELinux policy. Without one, Ollama runs as `init_t` (the generic systemd service context)
+and is denied network access -- it cannot bind to port 11434 or pull models from the
+registry.
+
+Setting `ai_ollama_selinux_policy: true` deploys a confined policy that creates a dedicated
+`ollama_t` domain with only the permissions Ollama needs:
+
+| Permission | Purpose |
+|------------|---------|
+| Bind to port 11434 | Serve the local API |
+| Listen/accept TCP connections | Handle API requests |
+| Connect to HTTPS ports | Pull models from `registry.ollama.ai` |
+| Read `/proc/sys/net`, `/proc/meminfo` | Network config and memory detection |
+| Read/write `/usr/share/ollama` | Model storage |
+| DNS resolution | Resolve registry hostname |
+| Read `/etc/*`, NSS, locale | Standard daemon operation |
+
+The full policy with detailed rationale for each rule is in `files/selinux/ollama.te`.
+
+```yaml
+ai_ollama_selinux_policy: true    # enable on SELinux-enforcing hosts
+```
+
+> **Note:** This installs `selinux-policy-devel` and `policycoreutils-python-utils` as
+> build dependencies on the target host.
 
 **Service lifecycle:**
 
