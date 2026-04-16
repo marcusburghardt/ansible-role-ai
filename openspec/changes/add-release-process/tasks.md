@@ -11,4 +11,4 @@
 ## 3. Verification
 
 - [x] 3.1 Validate workflow YAML syntax with `yamllint`
-- [ ] 3.2 Commit and push -- verify release-please opens a release PR on GitHub
+- [x] 3.2 Commit and push -- verify release-please opens a release PR on GitHub
