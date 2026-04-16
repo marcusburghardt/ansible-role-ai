@@ -529,6 +529,38 @@ Example Playbook
     - ansible-role-ai
 ```
 
+Release Process
+---------------
+
+This role uses [release-please](https://github.com/googleapis/release-please) for
+automated versioning based on
+[Conventional Commits](https://www.conventionalcommits.org/).
+
+**How it works:**
+
+1. Push commits to `main` using conventional prefixes (`feat:`, `fix:`, `chore:`, etc.)
+2. Release-please opens a PR with a version bump and changelog update
+3. Review and merge the PR to create a git tag and GitHub Release
+4. Ansible Galaxy imports the role automatically on each release
+
+**Version bumps:**
+
+| Commit prefix | Example | Version bump |
+|---------------|---------|--------------|
+| `fix:` | `fix: correct model pull check` | Patch (`0.1.0` → `0.1.1`) |
+| `feat:` | `feat: add new provider` | Patch (`0.1.x` → `0.1.x+1`) |
+| `BREAKING CHANGE` | footer in commit body | Minor (`0.1.x` → `0.2.0`) |
+
+> **Note:** While the version is below `1.0.0`, breaking changes bump minor and features
+> bump patch. After `1.0.0`, standard semver applies (breaking = major, feat = minor,
+> fix = patch).
+
+**Installing a specific version:**
+
+```bash
+ansible-galaxy role install marcusburghardt.ai,v0.1.0
+```
+
 License
 -------
 
