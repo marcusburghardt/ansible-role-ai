@@ -1,0 +1,25 @@
+# Create release PRs and tags from conventional commits.
+# Release-please analyzes commits since the last tag, opens a PR with
+# version bump and changelog updates. Merging the PR creates the tag
+# and GitHub Release, which triggers the Galaxy publish workflow.
+---
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Run release-please
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071  # v4.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

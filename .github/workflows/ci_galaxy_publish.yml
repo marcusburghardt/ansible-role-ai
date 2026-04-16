@@ -1,12 +1,13 @@
-# Publish role to Ansible Galaxy on push to main.
+# Publish role to Ansible Galaxy when a new release is published.
+# Triggered by the release-please workflow after a release PR is merged.
 # Requires GALAXY_API_KEY secret configured in the repository settings.
 ---
 name: Publish to Ansible Galaxy
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types:
+      - published
 
 permissions: {}
 
