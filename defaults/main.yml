@@ -46,8 +46,13 @@ ai_ollama_selinux_policy: false
 ai_ollama_service_enabled: false
 ai_ollama_service_state: started
 
-# Curated model list: override in playbook to enable/disable models.
-# Only enabled models are pulled during configure_ollama.
+# Curated model list: override in playbook to manage models.
+# Each entry supports three lifecycle states:
+#   enabled: true                → model is pulled (ensure present)
+#   enabled: false               → model is skipped (no-op, left as-is)
+#   enabled: false, removed: true → model is deleted (ensure absent)
+# The 'removed' field is optional and defaults to false. Setting both
+# 'enabled' and 'removed' to true is invalid and will fail the playbook.
 ai_ollama_models:
   - { enabled: true, name: 'qwen3:8b' }
   - { enabled: false, name: 'qwen3:32b' }

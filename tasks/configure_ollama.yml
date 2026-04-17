@@ -1,4 +1,16 @@
 ---
+# Validate that no model has both enabled and removed set to true.
+# This is a user error: a model cannot be pulled and deleted at the same time.
+- name: "{{ role_name }} | {{ task.name }} | Validate model list for conflicting flags"
+  ansible.builtin.fail:
+    msg: >-
+      Model '{{ item.name }}' has both 'enabled' and 'removed' set to true.
+      Fix ai_ollama_models: set 'enabled' to false or 'removed' to false.
+  loop: "{{ ai_ollama_models | selectattr('enabled') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.removed | default(false)
+
 # Ensure the Ollama server is responding before pulling models.
 # It may be running via systemd, or we start it manually if needed.
 - name: "{{ role_name }} | {{ task.name }} | Check if Ollama server is responding"
@@ -33,3 +45,24 @@
     label: "{{ item.name }}"
   register: _ollama_pull_result
   changed_when: "'pulling' in _ollama_pull_result.stderr | default('')"
+
+# Remove models marked for deletion.
+# First list installed models, then only remove those actually present.
+- name: "{{ role_name }} | {{ task.name }} | List installed Ollama models"
+  ansible.builtin.command:
+    cmd: ollama list
+  register: _ollama_installed
+  changed_when: false
+  when: ai_ollama_models | selectattr('removed', 'defined') | selectattr('removed') | list | length > 0
+
+- name: "{{ role_name }} | {{ task.name }} | Remove Ollama models marked for deletion"
+  ansible.builtin.command:
+    cmd: "ollama rm {{ item.name }}"
+  loop: "{{ ai_ollama_models | selectattr('removed', 'defined') | selectattr('removed') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - _ollama_installed.stdout is defined
+    - item.name in _ollama_installed.stdout
+  register: _ollama_rm_result
+  changed_when: _ollama_rm_result.rc == 0
