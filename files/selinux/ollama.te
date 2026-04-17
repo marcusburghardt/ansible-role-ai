@@ -13,6 +13,7 @@
 #   ──────────────────────────────────  ──────────────────────────────────────
 #   setuid / setgid capabilities        Drop privileges after starting as root
 #   fork                                Spawn worker processes
+#   Execute own binary (no transition)  Spawn model runner subprocesses
 #   Inherit systemd file descriptors    Standard for systemd-managed daemons
 #   Read /etc/* files                   resolv.conf, hosts, nsswitch.conf
 #   NSS user/group lookups              Resolve the 'ollama' system user
@@ -26,7 +27,7 @@
 #   Read/write /usr/share/ollama        Model storage directory
 #
 
-policy_module(ollama, 1.0.0)
+policy_module(ollama, 1.1.0)
 
 ########################################
 #
@@ -46,6 +47,9 @@ allow ollama_t self:capability { setgid setuid };
 allow ollama_t self:process { fork };
 allow ollama_t self:fifo_file rw_fifo_file_perms;
 allow ollama_t self:unix_stream_socket create_stream_socket_perms;
+
+# Re-exec itself to spawn model runner subprocesses
+can_exec(ollama_t, ollama_exec_t)
 
 ########################################
 #
