@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.1](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.1.0...v0.1.1) (2026-04-17)
+
+
+### Features
+
+* add declarative model removal via 'removed' flag in ai_ollama_models ([db772d3](https://github.com/marcusburghardt/ansible-role-ai/commit/db772d3624efba575e008d6f095b16bab3938e45))
+
+
+### Bug Fixes
+
+* allow ollama_t to exec its own binary for model runners ([b7dcc2c](https://github.com/marcusburghardt/ansible-role-ai/commit/b7dcc2c7d362c6e4c203ce8bd8bb46ab8a631519))
+
+
+### Documentation
+
+* add release process documentation to README ([06d11b7](https://github.com/marcusburghardt/ansible-role-ai/commit/06d11b7615bd92a7d8d681d39785d3c71e51cf26))
+
 ## [0.2.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.1.0...v0.2.0) (2026-04-16)
 
 
