@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.1.1...v0.1.2) (2026-04-27)
+
+
+### Miscellaneous
+
+* unbound-force as trusted org in github ([6ce2f64](https://github.com/marcusburghardt/ansible-role-ai/commit/6ce2f64d9d05bafad73ab6473219282a8bfdfc68))
+
 ## [0.1.1](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.1.0...v0.1.1) (2026-04-17)
 
 
