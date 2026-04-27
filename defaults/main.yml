@@ -120,7 +120,7 @@ ai_opencode_instructions:
 # Trusted GitHub organizations for command security guards
 # Commands like checkout_pr and review_pr will verify the repo owner
 # against this list before proceeding. Empty list means always ask.
-ai_trusted_github_orgs: ['marcusburghardt', 'complytime']
+ai_trusted_github_orgs: ['marcusburghardt', 'complytime', 'unbound-force']
 
 # OpenCode commands
 # Built-in commands from files/commands/ are auto-discovered and deployed.
