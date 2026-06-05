@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.2](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.1.1...v0.1.2) (2026-06-05)
+
+
+### Miscellaneous
+
+* **deps:** Bump actions/checkout from 6.0.2 to 6.0.3 ([33f1836](https://github.com/marcusburghardt/ansible-role-ai/commit/33f1836e42f66b8d086a8b7077c6ac294e849e67))
+* **deps:** Bump actions/checkout from 6.0.2 to 6.0.3 ([b21cdd0](https://github.com/marcusburghardt/ansible-role-ai/commit/b21cdd0184d70274852735025ba1d2fb34c3785c))
+* **deps:** Bump googleapis/release-please-action from 4.4.1 to 5.0.0 ([17e8993](https://github.com/marcusburghardt/ansible-role-ai/commit/17e89937f5336db0b4a49bfe9ba50ba8505635ca))
+* **deps:** Bump googleapis/release-please-action from 4.4.1 to 5.0.0 ([8a52393](https://github.com/marcusburghardt/ansible-role-ai/commit/8a523935d043603095942222c846bb203c560d96))
+* unbound-force as trusted org in github ([6ce2f64](https://github.com/marcusburghardt/ansible-role-ai/commit/6ce2f64d9d05bafad73ab6473219282a8bfdfc68))
+
 ## [0.1.1](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.1.0...v0.1.1) (2026-04-17)
 
 
