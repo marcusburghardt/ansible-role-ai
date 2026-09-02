@@ -106,6 +106,10 @@ ai_opencode_disabled_providers: []
 ai_opencode_config_dir: "{{ ai_user_home_dir }}/.config/opencode"
 ai_opencode_config_file: "{{ ai_opencode_config_dir }}/opencode.json"
 
+# Add a global options section to turn off the bugged schema
+ai_opencode_options:
+  thinking: false
+
 # OpenCode instruction files
 # The ~/... path is resolved from the user's home directory (always loaded).
 # Relative paths are resolved from the repo root (loaded if the file exists).
