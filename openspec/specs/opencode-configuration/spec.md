@@ -1,5 +1,5 @@
 ### Requirement: Deploy OpenCode configuration file from template
-The role SHALL deploy the OpenCode configuration file to `ai_opencode_config_file` (default: `~/.config/opencode/opencode.json`) using a Jinja2 template. The template SHALL incorporate variables for model, small_model, provider settings, disabled providers, permissions, compaction settings, and a variable-driven instructions file list (`ai_opencode_instructions`).
+The role SHALL deploy the OpenCode configuration file to `ai_opencode_config_file` (default: `~/.config/opencode/opencode.json`) using a Jinja2 template. The template SHALL incorporate variables for model, small_model, agent routing (`ai_opencode_agents`), plugin list (`ai_opencode_plugins`), provider settings, disabled providers, permissions, compaction settings (`ai_opencode_compaction`), and a variable-driven instructions file list (`ai_opencode_instructions`).
 
 #### Scenario: Configuration file is deployed with default settings
 - **WHEN** the `configure_opencode` task is enabled and runs
@@ -20,6 +20,30 @@ The role SHALL deploy the OpenCode configuration file to `ai_opencode_config_fil
 #### Scenario: Configuration directory is created if missing
 - **WHEN** the parent directory of `ai_opencode_config_file` does not exist
 - **THEN** the role SHALL create the directory structure before deploying the config file
+
+#### Scenario: Agent routing block is rendered from variable
+- **WHEN** the role deploys with default `ai_opencode_agents` value and default `ai_model` / `ai_small_model` (both `ollama/qwen3:8b`)
+- **THEN** the deployed `opencode.json` SHALL contain an `"agent"` block with `build`, `plan`, `explore`, and `general` keys, all with `model` set to `ollama/qwen3:8b`
+
+#### Scenario: Agent routing reflects per-agent model overrides
+- **WHEN** the consumer sets `ai_opencode_agent_plan_model` to `google-vertex-anthropic/claude-sonnet-4-6@default` and `ai_opencode_agent_explore_model` to `google-vertex-anthropic/claude-haiku-4-5@20251001`
+- **THEN** the deployed `opencode.json` SHALL contain an `"agent"` block where `plan.model` is `google-vertex-anthropic/claude-sonnet-4-6@default` and `explore.model` is `google-vertex-anthropic/claude-haiku-4-5@20251001`, while `build` and `general` retain their defaults
+
+#### Scenario: Plugin list is rendered from variable
+- **WHEN** the role deploys with default `ai_opencode_plugins` value (empty list)
+- **THEN** the deployed `opencode.json` SHALL contain `"plugin": []`
+
+#### Scenario: Plugin list reflects user additions
+- **WHEN** the consumer sets `ai_opencode_plugins` to `["@angdrew/opencode-hashline-plugin", "@tarquinen/opencode-dcp"]`
+- **THEN** the deployed `opencode.json` SHALL contain `"plugin": ["@angdrew/opencode-hashline-plugin", "@tarquinen/opencode-dcp"]`
+
+#### Scenario: Compaction settings are rendered from variable
+- **WHEN** the role deploys with default `ai_opencode_compaction` value
+- **THEN** the deployed `opencode.json` SHALL contain `"compaction": {"auto": true, "prune": true, "reserved": 10000}`
+
+#### Scenario: Compaction settings reflect user overrides
+- **WHEN** the consumer overrides `ai_opencode_compaction` to `{"auto": true, "prune": false, "reserved": 5000}`
+- **THEN** the deployed `opencode.json` SHALL contain the overridden compaction values
 
 ### Requirement: Deploy AI agent wrapper script from template
 The role SHALL deploy a wrapper script to `ai_user_scripts_dir/ai_agent_script_name` (default: `~/bin/mybuddy`) using a Jinja2 template. The script SHALL export GCP environment variables (`GCP_PROJECT`, `VERTEX_LOCATION`), a `TRUSTED_GITHUB_ORGS` variable (comma-separated list from `ai_trusted_github_orgs`), and launch `opencode`.
@@ -134,6 +158,39 @@ The role SHALL deploy a `commit.md` file to `~/.config/opencode/` containing uni
 #### Scenario: Commit.md is loaded first in instructions order
 - **WHEN** examining the `ai_opencode_instructions` default
 - **THEN** `~/.config/opencode/commit.md` SHALL appear before repository-relative instruction files so that repo-level files can override it via last-wins semantics
+
+### Requirement: Per-agent model variables for independent routing control
+The role SHALL provide individual default variables for each OpenCode built-in agent's model assignment: `ai_opencode_agent_build_model` (default: `{{ ai_model }}`), `ai_opencode_agent_plan_model` (default: `{{ ai_small_model }}`), `ai_opencode_agent_explore_model` (default: `{{ ai_small_model }}`), and `ai_opencode_agent_general_model` (default: `{{ ai_small_model }}`). These variables SHALL be referenced by the `ai_opencode_agents` dict and SHALL allow consumers to override individual agent models without replacing the entire agent configuration dict.
+
+#### Scenario: Default agent models resolve to primary model variables
+- **WHEN** the consumer does not override any `ai_opencode_agent_*_model` variables
+- **THEN** `ai_opencode_agent_build_model` SHALL resolve to the value of `ai_model`, and `ai_opencode_agent_plan_model`, `ai_opencode_agent_explore_model`, and `ai_opencode_agent_general_model` SHALL resolve to the value of `ai_small_model`
+
+#### Scenario: Individual agent model override does not affect other agents
+- **WHEN** the consumer overrides only `ai_opencode_agent_plan_model` to a Sonnet model
+- **THEN** only the `plan` agent's model SHALL change; `build`, `explore`, and `general` SHALL retain their defaults
+
+### Requirement: Plugin deployment list
+The role SHALL provide an `ai_opencode_plugins` list variable (default: empty list `[]`) that is rendered directly as the `"plugin"` array in the deployed `opencode.json`. The role SHALL NOT default any plugins to enabled. Users opt in to plugins by adding package names to the list in their playbook.
+
+#### Scenario: No plugins by default
+- **WHEN** the consumer does not override `ai_opencode_plugins`
+- **THEN** the deployed `opencode.json` SHALL contain `"plugin": []`
+
+#### Scenario: User adds plugins
+- **WHEN** the consumer sets `ai_opencode_plugins` to `["@angdrew/opencode-hashline-plugin"]`
+- **THEN** the deployed `opencode.json` SHALL contain `"plugin": ["@angdrew/opencode-hashline-plugin"]`
+
+### Requirement: Data-driven compaction settings
+The role SHALL provide an `ai_opencode_compaction` dict variable (default: `{auto: true, prune: true, reserved: 10000}`) that is rendered directly as the `"compaction"` block in the deployed `opencode.json`. This replaces the previously hardcoded compaction block in the template.
+
+#### Scenario: Default compaction matches previous behavior
+- **WHEN** the consumer does not override `ai_opencode_compaction`
+- **THEN** the deployed `opencode.json` SHALL contain `"compaction": {"auto": true, "prune": true, "reserved": 10000}`, matching the previously hardcoded values
+
+#### Scenario: User tunes compaction
+- **WHEN** the consumer overrides `ai_opencode_compaction` to `{"auto": false, "prune": true, "reserved": 20000}`
+- **THEN** the deployed `opencode.json` SHALL contain the overridden compaction values
 
 ### Requirement: Skip configuration when task is disabled
 The role SHALL skip all configuration activities when the `configure_opencode` task entry has `enabled: false`.

@@ -53,7 +53,14 @@ Take a look in the Example Playbook section.
 | `ai_openspec_version` | `latest` | OpenSPEC version (`latest` or pinned) |
 | `ai_speckit_version` | `latest` | SpecKit version (`latest` or pinned tag, e.g., `v0.4.4`) |
 | `ai_model` | `ollama/qwen3:8b` | Primary AI model |
-| `ai_small_model` | `ollama/qwen3:8b` | Small/fast AI model |
+| `ai_small_model` | `ollama/qwen3:8b` | Small/fast AI model (background tasks) |
+| `ai_opencode_agent_build_model` | `{{ ai_model }}` | Model for build agent |
+| `ai_opencode_agent_plan_model` | `{{ ai_small_model }}` | Model for plan agent |
+| `ai_opencode_agent_explore_model` | `{{ ai_small_model }}` | Model for explore agent |
+| `ai_opencode_agent_general_model` | `{{ ai_small_model }}` | Model for general agent |
+| `ai_opencode_agents` | See defaults | Full agent routing dict (rendered into `opencode.json`) |
+| `ai_opencode_plugins` | `[]` | Opt-in list of npm plugin packages for OpenCode |
+| `ai_opencode_compaction` | See defaults | Compaction settings dict (`auto`, `prune`, `reserved`) |
 | `ai_opencode_providers` | See defaults | Provider catalog for OpenCode (rendered into `opencode.json`) |
 | `ai_opencode_ollama_models` | See defaults | Ollama models visible in OpenCode (subset of pulled models) |
 | `ai_opencode_disabled_providers` | `[]` | Providers that OpenCode should not auto-detect |
@@ -202,6 +209,65 @@ ai_small_model: "anthropic/claude-sonnet-4-5"
 If you are **not** using Vertex AI, these variables are harmlessly ignored. The wrapper
 script only exports GCP environment variables when `google-vertex-anthropic` is present
 in `ai_opencode_providers`.
+
+### Cost Optimization (Paid Providers)
+
+When using paid API providers, OpenCode sessions can burn tokens on tasks that don't
+require the most capable model. The role supports three complementary strategies to
+reduce cost, informed by the
+[OpenCode Token Efficiency Configuration Guide](https://gist.github.com/jflowers/c54514358abf892df84d5e6b8e7d7772)
+by [jflowers](https://github.com/jflowers).
+
+**Agent model routing:**
+
+The role assigns each OpenCode agent its own model variable. By default, `build` uses
+`ai_model` and all other agents (`plan`, `explore`, `general`) use `ai_small_model`.
+For Ollama users this is a no-op (same model everywhere). For paid providers, setting
+different primary and small models activates routing automatically:
+
+```yaml
+ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
+ai_small_model: "google-vertex-anthropic/claude-haiku-4-5@20251001"
+```
+
+For three-tier routing (Opus / Sonnet / Haiku), override individual agent variables:
+
+```yaml
+ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
+ai_small_model: "google-vertex-anthropic/claude-haiku-4-5@20251001"
+ai_opencode_agent_plan_model: "google-vertex-anthropic/claude-sonnet-4-6@default"
+ai_opencode_agent_general_model: "google-vertex-anthropic/claude-sonnet-4-6@default"
+```
+
+This routes build to Opus, plan/general to Sonnet, and explore to Haiku.
+
+**Plugins (opt-in):**
+
+OpenCode supports plugins that further reduce token usage. The role deploys any plugins
+listed in `ai_opencode_plugins` but does not enable any by default. Users opt in:
+
+```yaml
+ai_opencode_plugins:
+  - "@angdrew/opencode-hashline-plugin"   # content-addressable edits
+  - "@tarquinen/opencode-dcp"             # dynamic context pruning
+```
+
+OpenCode installs npm plugins automatically at startup. Plugin-specific configuration
+files (e.g., `dcp.jsonc`) are managed by the user outside this role.
+
+**Compaction tuning:**
+
+The role deploys compaction settings via the `ai_opencode_compaction` variable. The
+defaults enable automatic compaction with output pruning:
+
+```yaml
+ai_opencode_compaction:
+  auto: true
+  prune: true
+  reserved: 10000    # tokens reserved for the model's response
+```
+
+Override to tune for your context window size or disable compaction entirely.
 
 ### Migration from Previous Versions
 

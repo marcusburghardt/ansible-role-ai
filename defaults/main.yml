@@ -66,6 +66,30 @@ ai_ollama_models:
 ai_model: "ollama/qwen3:8b"
 ai_small_model: "ollama/qwen3:8b"
 
+# Per-agent model routing
+# Each agent has its own model variable for independent override.
+# Defaults route build to ai_model and all others to ai_small_model.
+# For Ollama users (same model everywhere), this is a harmless no-op.
+# For paid providers, override individual variables for cost-optimized routing.
+# Reference: https://gist.github.com/jflowers/c54514358abf892df84d5e6b8e7d7772
+ai_opencode_agent_build_model: "{{ ai_model }}"
+ai_opencode_agent_plan_model: "{{ ai_small_model }}"
+ai_opencode_agent_explore_model: "{{ ai_small_model }}"
+ai_opencode_agent_general_model: "{{ ai_small_model }}"
+
+# Full agent configuration dict, rendered directly into the "agent" block
+# of opencode.json. Uses the per-agent model variables above. Override
+# this dict only if agents gain non-model configuration knobs in the future.
+ai_opencode_agents:
+  build:
+    model: "{{ ai_opencode_agent_build_model }}"
+  plan:
+    model: "{{ ai_opencode_agent_plan_model }}"
+  explore:
+    model: "{{ ai_opencode_agent_explore_model }}"
+  general:
+    model: "{{ ai_opencode_agent_general_model }}"
+
 # GCP settings for AI model access
 # Only relevant when google-vertex-anthropic is in ai_opencode_providers.
 # Harmlessly ignored otherwise.
@@ -102,6 +126,12 @@ ai_opencode_providers:
 # are disabled. Override to block specific providers (e.g., ["openai", "gemini"]).
 ai_opencode_disabled_providers: []
 
+# OpenCode plugins
+# Opt-in list of npm plugin packages for OpenCode. Empty by default.
+# OpenCode installs plugins automatically at startup via Bun.
+# Example: ["@angdrew/opencode-hashline-plugin", "@tarquinen/opencode-dcp"]
+ai_opencode_plugins: []
+
 # OpenCode configuration
 ai_opencode_config_dir: "{{ ai_user_home_dir }}/.config/opencode"
 ai_opencode_config_file: "{{ ai_opencode_config_dir }}/opencode.json"
@@ -109,6 +139,15 @@ ai_opencode_config_file: "{{ ai_opencode_config_dir }}/opencode.json"
 # Add a global options section to turn off the bugged schema
 ai_opencode_options:
   thinking: false
+
+# OpenCode compaction settings
+# Controls automatic context compaction behavior. Rendered directly into the
+# "compaction" block of opencode.json. Override to tune reserved tokens,
+# disable pruning, or turn off auto-compaction.
+ai_opencode_compaction:
+  auto: true
+  prune: true
+  reserved: 10000
 
 # OpenCode instruction files
 # The ~/... path is resolved from the user's home directory (always loaded).
