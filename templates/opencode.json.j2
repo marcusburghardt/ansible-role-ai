@@ -4,7 +4,9 @@
     "small_model": "{{ ai_small_model }}",
     "autoupdate": "notify",
     "share": "manual",
+    "plugin": {{ ai_opencode_plugins | to_json }},
     "options": {{ ai_opencode_options | default({'thinking': false}) | to_json }},
+    "agent": {{ ai_opencode_agents | to_json }},
     "provider": {{ ai_opencode_providers | to_json }},
     "disabled_providers": {{ ai_opencode_disabled_providers | to_json }},
     "permission": {
@@ -58,11 +60,7 @@
         "*.p8": "deny"
       }
     },
-    "compaction": {
-      "auto": true,
-      "prune": true,
-      "reserved": 10000
-    },
+    "compaction": {{ ai_opencode_compaction | to_json }},
     "instructions": {{ ai_opencode_instructions | to_json }},
     "watcher": {
       "ignore": ["node_modules/**", "dist/**", ".git/**", "vendor/**"]
