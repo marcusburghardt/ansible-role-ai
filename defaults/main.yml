@@ -10,6 +10,7 @@ ai_tasks:
   - { enabled: true, name: 'install_openspec' }
   - { enabled: true, name: 'install_speckit' }
   - { enabled: false, name: 'install_cursor' }
+  - { enabled: false, name: 'configure_grafana_metrics' }
 
 # User directories
 ai_user_home_dir: "{{ ansible_facts['user_dir'] }}"
@@ -204,6 +205,15 @@ ai_cursor_version: latest
 ai_cursor_install_method: auto
 # Directory for AppImage binary (only used when install method is appimage)
 ai_cursor_appimage_dir: "{{ ai_user_home_dir }}/.local/bin"
+
+# Grafana metrics visualization (disabled by default)
+# Deploys a helper script and provisioning files for running an ephemeral
+# Grafana container (podman) pre-configured with the opencode-metrics dashboard.
+ai_grafana_metrics_port: 3033
+ai_grafana_metrics_container_name: "opencode-grafana"
+ai_grafana_metrics_script_name: "opencode-grafana"
+ai_grafana_metrics_data_dir: "{{ ai_user_home_dir }}/.local/share/opencode-metrics"
+ai_grafana_metrics_provisioning_dir: "{{ ai_opencode_config_dir }}/grafana"
 
 # Cleanup (used by cleanup_opencode task, disabled by default in ai_tasks)
 # Remove specific commands/skills from the target host by name.

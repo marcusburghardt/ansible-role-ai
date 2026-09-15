@@ -1,0 +1,120 @@
+#!/bin/bash
+# opencode-grafana: Manage an ephemeral Grafana container for opencode-metrics visualization.
+# Deployed by ansible-role-ai (configure_grafana_metrics task).
+
+set -euo pipefail
+
+CONTAINER_NAME="{{ ai_grafana_metrics_container_name }}"
+PORT="{{ ai_grafana_metrics_port }}"
+DATA_DIR="{{ ai_grafana_metrics_data_dir }}"
+PROVISIONING_DIR="{{ ai_grafana_metrics_provisioning_dir }}"
+VOLUME_NAME="opencode-grafana-data"
+IMAGE="docker.io/grafana/grafana:latest"
+
+usage() {
+    echo "Usage: $(basename "$0") {start|stop|status|logs}"
+    echo ""
+    echo "Manage an ephemeral Grafana container for opencode-metrics visualization."
+    echo ""
+    echo "Commands:"
+    echo "  start   Start the Grafana container (http://localhost:${PORT})"
+    echo "  stop    Stop and remove the container (data volume preserved)"
+    echo "  status  Show whether the container is running"
+    echo "  logs    Follow the container logs (Ctrl+C to stop)"
+    exit 1
+}
+
+check_podman() {
+    if ! command -v podman &>/dev/null; then
+        echo "Error: podman is not installed."
+        echo "Install podman first: https://podman.io/docs/installation"
+        exit 1
+    fi
+}
+
+check_data_dir() {
+    if [ ! -d "${DATA_DIR}" ]; then
+        echo "Error: Metrics data directory not found: ${DATA_DIR}"
+        echo "The opencode-metrics plugin needs to collect data first."
+        echo "Run at least one OpenCode session with the metrics plugin enabled."
+        exit 1
+    fi
+}
+
+cmd_start() {
+    check_podman
+    check_data_dir
+
+    if podman ps --format '{{ '{{' }}.Names{{ '}}' }}' 2>/dev/null | grep -q "^${CONTAINER_NAME}$"; then
+        echo "Container '${CONTAINER_NAME}' is already running."
+        echo "Grafana is available at http://localhost:${PORT}"
+        exit 0
+    fi
+
+    # Remove any stopped container with the same name
+    podman rm -f "${CONTAINER_NAME}" &>/dev/null || true
+
+    echo "Starting Grafana container..."
+    podman run -d \
+        --name "${CONTAINER_NAME}" \
+        -p "${PORT}:3000" \
+        -v "${VOLUME_NAME}:/var/lib/grafana" \
+        -v "${DATA_DIR}:/data/metrics:ro,Z" \
+        -v "${PROVISIONING_DIR}/provisioning:/etc/grafana/provisioning:ro,Z" \
+        -v "${PROVISIONING_DIR}/dashboards:/var/lib/grafana/dashboards:ro,Z" \
+        -e GF_INSTALL_PLUGINS=frser-sqlite-datasource \
+        -e GF_SECURITY_ADMIN_PASSWORD=admin \
+        -e GF_AUTH_ANONYMOUS_ENABLED=true \
+        -e GF_AUTH_ANONYMOUS_ORG_ROLE=Admin \
+        "${IMAGE}"
+
+    echo "Grafana is starting at http://localhost:${PORT}"
+    echo "First launch may take ~30s while the SQLite plugin is installed."
+}
+
+cmd_stop() {
+    check_podman
+
+    if ! podman ps -a --format '{{ '{{' }}.Names{{ '}}' }}' 2>/dev/null | grep -q "^${CONTAINER_NAME}$"; then
+        echo "Container '${CONTAINER_NAME}' is not running."
+        exit 0
+    fi
+
+    echo "Stopping Grafana container..."
+    podman stop "${CONTAINER_NAME}" &>/dev/null || true
+    podman rm "${CONTAINER_NAME}" &>/dev/null || true
+    echo "Container stopped. Data volume '${VOLUME_NAME}' preserved."
+}
+
+cmd_status() {
+    check_podman
+
+    if podman ps --format '{{ '{{' }}.Names{{ '}}' }}' 2>/dev/null | grep -q "^${CONTAINER_NAME}$"; then
+        echo "Grafana is running."
+        echo "URL: http://localhost:${PORT}"
+        echo ""
+        podman ps --filter "name=${CONTAINER_NAME}" --format "table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}\t{{ '{{' }}.Ports{{ '}}' }}"
+    else
+        echo "Grafana is not running."
+        echo "Start with: $(basename "$0") start"
+    fi
+}
+
+cmd_logs() {
+    check_podman
+
+    if ! podman ps --format '{{ '{{' }}.Names{{ '}}' }}' 2>/dev/null | grep -q "^${CONTAINER_NAME}$"; then
+        echo "Container '${CONTAINER_NAME}' is not running."
+        exit 1
+    fi
+
+    podman logs --follow "${CONTAINER_NAME}"
+}
+
+case "${1:-}" in
+    start)  cmd_start ;;
+    stop)   cmd_stop ;;
+    status) cmd_status ;;
+    logs)   cmd_logs ;;
+    *)      usage ;;
+esac

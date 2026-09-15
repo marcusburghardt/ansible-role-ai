@@ -18,6 +18,7 @@ This role will:
 - Optionally clean up specific commands and skills from the target host;
 - Optionally install system-level dependencies (nodejs, npm, uv) when enabled;
 - Optionally install and update Cursor IDE via RPM, DEB, or AppImage with automatic format detection;
+- Optionally deploy a Grafana metrics dashboard with a helper script for visualizing opencode-metrics data via an ephemeral podman container;
 
 Requirements
 ------------
@@ -79,6 +80,11 @@ Take a look in the Example Playbook section.
 | `ai_cursor_version` | `latest` | Cursor version (`latest` or pinned major.minor, e.g., `3.0`) |
 | `ai_cursor_install_method` | `auto` | Install format: `auto`, `rpm`, `deb`, or `appimage` |
 | `ai_cursor_appimage_dir` | `~/.local/bin` | Directory for AppImage binary (AppImage method only) |
+| `ai_grafana_metrics_port` | `3033` | Host port for the Grafana container |
+| `ai_grafana_metrics_container_name` | `opencode-grafana` | Podman container name |
+| `ai_grafana_metrics_script_name` | `opencode-grafana` | Helper script name in `~/bin/` |
+| `ai_grafana_metrics_data_dir` | `~/.local/share/opencode-metrics` | Metrics database directory (bind-mounted into container) |
+| `ai_grafana_metrics_provisioning_dir` | `~/.config/opencode/grafana` | Grafana provisioning and dashboard files directory |
 
 ### Ollama (Local Models)
 
@@ -396,6 +402,44 @@ For AppImage installations, the task also deploys a `.desktop` file to
 > still display update prompts even when the version is managed by Ansible. This is expected
 > behavior -- the system-installed version is the authoritative one, and the internal updater
 > cannot override it for RPM/DEB installations. You can safely dismiss these prompts.
+
+### Metrics Visualization
+
+The `configure_grafana_metrics` task deploys a helper script and Grafana provisioning files
+for visualizing data from the [opencode-metrics](https://github.com/marcusburghardt/opencode-metrics)
+plugin. It is **disabled by default** and must be explicitly enabled in `ai_tasks`.
+
+**Prerequisites:**
+
+- `podman` installed on the target host (the task does not install podman)
+- The opencode-metrics plugin collecting data to `~/.local/share/opencode-metrics/metrics.db`
+
+**Enable the task:**
+
+```yaml
+ai_tasks:
+  # ... other tasks ...
+  - { enabled: true, name: 'configure_grafana_metrics' }
+```
+
+After running the playbook, use the helper script to manage the Grafana container:
+
+```bash
+opencode-grafana start    # Start Grafana at http://localhost:3033
+opencode-grafana stop     # Stop and remove the container (data preserved)
+opencode-grafana status   # Check if the container is running
+opencode-grafana logs     # Follow container logs
+```
+
+The container runs an ephemeral Grafana instance pre-configured with:
+
+- The [frser-sqlite-datasource](https://github.com/fr-ser/grafana-sqlite-datasource) plugin
+- A pre-built dashboard with 9 panels (cost, tokens, cache, classification, duration, projects)
+- Anonymous admin access (no login required -- local-only, single-user tool)
+- A named podman volume for persisting preferences and dashboard modifications across restarts
+
+Port 3033 is used by default to avoid conflicts with other services on port 3000. Override
+with `ai_grafana_metrics_port`.
 
 ### Cleanup
 

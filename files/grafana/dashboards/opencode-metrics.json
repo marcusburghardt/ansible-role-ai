@@ -1,0 +1,300 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Daily Cost",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 30,
+            "pointSize": 5,
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "rawQueryText": "SELECT date(s.started_at/1000, 'unixepoch') AS time, SUM(m.value) AS cost FROM measurements m JOIN sessions s ON s.session_id = m.session_id WHERE m.metric_name = 'cost' AND s.started_at > 0 GROUP BY date(s.started_at/1000, 'unixepoch') ORDER BY time",
+          "queryType": "table",
+          "timeColumns": ["time"],
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Cost by Classification",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
+        "tooltip": { "mode": "single" },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": ["sum"]
+        }
+      },
+      "targets": [
+        {
+          "rawQueryText": "SELECT s.classification, SUM(m.value) AS cost FROM measurements m JOIN sessions s ON s.session_id = m.session_id WHERE m.metric_name = 'cost' AND s.classification IS NOT NULL GROUP BY s.classification ORDER BY cost DESC",
+          "queryType": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Cost by Project",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "fillOpacity": 80
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "rawQueryText": "SELECT COALESCE(p.worktree, p.name, 'unknown') AS project, SUM(m.value) AS cost FROM measurements m JOIN sessions s ON s.session_id = m.session_id LEFT JOIN projects p ON p.project_id = s.project_id WHERE m.metric_name = 'cost' GROUP BY project ORDER BY cost DESC LIMIT 20",
+          "queryType": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Cost by Model",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "fillOpacity": 80
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "rawQueryText": "SELECT s.model, SUM(m.value) AS cost FROM measurements m JOIN sessions s ON s.session_id = m.session_id WHERE m.metric_name = 'cost' AND s.model IS NOT NULL GROUP BY s.model ORDER BY cost DESC LIMIT 20",
+          "queryType": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Cache Hit Ratio",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "pointSize": 5,
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "rawQueryText": "SELECT date(s.started_at/1000, 'unixepoch') AS time, AVG(m.value) AS cache_hit_ratio FROM measurements m JOIN sessions s ON s.session_id = m.session_id WHERE m.metric_name = 'cache_hit_ratio' AND s.started_at > 0 GROUP BY date(s.started_at/1000, 'unixepoch') ORDER BY time",
+          "queryType": "table",
+          "timeColumns": ["time"],
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Session Count by Day",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 80
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "rawQueryText": "SELECT date(started_at/1000, 'unixepoch') AS day, COUNT(*) AS sessions FROM sessions WHERE started_at > 0 GROUP BY date(started_at/1000, 'unixepoch') ORDER BY day",
+          "queryType": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Token Usage",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 30,
+            "pointSize": 5,
+            "lineWidth": 1,
+            "stacking": { "mode": "normal" }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "input" },
+            "properties": [{ "id": "displayName", "value": "Input Tokens" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "output" },
+            "properties": [{ "id": "displayName", "value": "Output Tokens" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "cache_read" },
+            "properties": [{ "id": "displayName", "value": "Cache Read Tokens" }]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "rawQueryText": "SELECT date(s.started_at/1000, 'unixepoch') AS time, SUM(CASE WHEN m.metric_name = 'tokens_input' THEN m.value ELSE 0 END) AS input, SUM(CASE WHEN m.metric_name = 'tokens_output' THEN m.value ELSE 0 END) AS output, SUM(CASE WHEN m.metric_name = 'tokens_cache_read' THEN m.value ELSE 0 END) AS cache_read FROM measurements m JOIN sessions s ON s.session_id = m.session_id WHERE m.metric_name IN ('tokens_input', 'tokens_output', 'tokens_cache_read') AND s.started_at > 0 GROUP BY date(s.started_at/1000, 'unixepoch') ORDER BY time",
+          "queryType": "table",
+          "timeColumns": ["time"],
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Duration Distribution",
+      "type": "histogram",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "fillOpacity": 80
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "bucketSize": 60,
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "rawQueryText": "SELECT m.value AS duration_seconds FROM measurements m JOIN sessions s ON s.session_id = m.session_id WHERE m.metric_name = 'duration_seconds' AND m.value > 0 AND s.started_at > 0",
+          "queryType": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Top Sessions",
+      "type": "table",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "cost" },
+            "properties": [{ "id": "unit", "value": "currencyUSD" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "date" },
+            "properties": [{ "id": "displayName", "value": "Date" }]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "cost", "desc": true }]
+      },
+      "targets": [
+        {
+          "rawQueryText": "SELECT date(s.started_at/1000, 'unixepoch') AS date, s.title, s.classification, s.model, ROUND(m.value, 4) AS cost FROM measurements m JOIN sessions s ON s.session_id = m.session_id WHERE m.metric_name = 'cost' AND s.started_at > 0 ORDER BY m.value DESC LIMIT 50",
+          "queryType": "table",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": ["opencode", "metrics"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "OpenCode Metrics",
+  "uid": "opencode-metrics-dashboard",
+  "version": 1
+}
