@@ -1,0 +1,12 @@
+---
+apiVersion: 1
+
+datasources:
+  - name: OpenCode Metrics
+    type: frser-sqlite-datasource
+    uid: opencode-metrics-sqlite
+    access: proxy
+    isDefault: true
+    jsonData:
+      path: /data/metrics/metrics.db
+      queryOnly: true

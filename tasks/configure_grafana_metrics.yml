@@ -1,0 +1,41 @@
+---
+# Create provisioning directory structure
+- name: "{{ role_name }} | {{ task.name }} | Ensure Grafana provisioning directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ ai_grafana_metrics_provisioning_dir }}"
+    - "{{ ai_grafana_metrics_provisioning_dir }}/provisioning"
+    - "{{ ai_grafana_metrics_provisioning_dir }}/provisioning/datasources"
+    - "{{ ai_grafana_metrics_provisioning_dir }}/provisioning/dashboards"
+    - "{{ ai_grafana_metrics_provisioning_dir }}/dashboards"
+
+# Deploy SQLite datasource configuration
+- name: "{{ role_name }} | {{ task.name }} | Deploy SQLite datasource configuration"
+  ansible.builtin.copy:
+    src: grafana/provisioning/datasources/sqlite.yaml
+    dest: "{{ ai_grafana_metrics_provisioning_dir }}/provisioning/datasources/sqlite.yaml"
+    mode: "0644"
+
+# Deploy dashboard provider configuration
+- name: "{{ role_name }} | {{ task.name }} | Deploy dashboard provider configuration"
+  ansible.builtin.copy:
+    src: grafana/provisioning/dashboards/provider.yaml
+    dest: "{{ ai_grafana_metrics_provisioning_dir }}/provisioning/dashboards/provider.yaml"
+    mode: "0644"
+
+# Deploy pre-built dashboard JSON
+- name: "{{ role_name }} | {{ task.name }} | Deploy OpenCode metrics dashboard"
+  ansible.builtin.copy:
+    src: grafana/dashboards/opencode-metrics.json
+    dest: "{{ ai_grafana_metrics_provisioning_dir }}/dashboards/opencode-metrics.json"
+    mode: "0644"
+
+# Deploy helper script
+- name: "{{ role_name }} | {{ task.name }} | Deploy Grafana helper script"
+  ansible.builtin.template:
+    src: opencode_grafana.sh.j2
+    dest: "{{ ai_user_scripts_dir }}/{{ ai_grafana_metrics_script_name }}"
+    mode: "0755"
