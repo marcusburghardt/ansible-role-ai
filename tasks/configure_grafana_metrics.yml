@@ -26,10 +26,10 @@
     dest: "{{ ai_grafana_metrics_provisioning_dir }}/provisioning/dashboards/provider.yaml"
     mode: "0644"
 
-# Deploy pre-built dashboard JSON
+# Deploy dashboard (templated with budget-derived thresholds)
 - name: "{{ role_name }} | {{ task.name }} | Deploy OpenCode metrics dashboard"
-  ansible.builtin.copy:
-    src: grafana/dashboards/opencode-metrics.json
+  ansible.builtin.template:
+    src: opencode_metrics_dashboard.json.j2
     dest: "{{ ai_grafana_metrics_provisioning_dir }}/dashboards/opencode-metrics.json"
     mode: "0644"
 

@@ -85,6 +85,7 @@ Take a look in the Example Playbook section.
 | `ai_grafana_metrics_script_name` | `opencode-grafana` | Helper script name in `~/bin/` |
 | `ai_grafana_metrics_data_dir` | `~/.local/share/opencode-metrics` | Metrics database directory (bind-mounted into container) |
 | `ai_grafana_metrics_provisioning_dir` | `~/.config/opencode/grafana` | Grafana provisioning and dashboard files directory |
+| `ai_grafana_metrics_monthly_budget` | `300` | Monthly cost budget (USD). Drives color thresholds on all cost KPI panels |
 
 ### Ollama (Local Models)
 
