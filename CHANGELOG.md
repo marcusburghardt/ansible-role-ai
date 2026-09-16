@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.2.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.1.1...v0.2.0) (2026-09-16)
+
+
+### Features
+
+* add agent model routing, plugin support, and data-driven compaction ([4e34a33](https://github.com/marcusburghardt/ansible-role-ai/commit/4e34a33db078c72082b7a494d329b85d585c1d88))
+* add configure_grafana_metrics task for metrics visualization ([808dd79](https://github.com/marcusburghardt/ansible-role-ai/commit/808dd79b8e9d46a91797f82011314ef83ce4730e))
+* add PR & Issue Analytics row to Grafana dashboard ([c849f19](https://github.com/marcusburghardt/ansible-role-ai/commit/c849f19147ba6feff17274663325f1a149cbea0d))
+* add PR template instruction file for OpenCode ([f07271b](https://github.com/marcusburghardt/ansible-role-ai/commit/f07271b84a9922a337dd9dc1a2b23a48bbf5e714))
+* introduce options section for opencode.json template ([9a817fe](https://github.com/marcusburghardt/ansible-role-ai/commit/9a817fe328ebc605ba479cd62dbf619cbd4f0e23))
+* overhaul Grafana metrics dashboard with ~30 panels and budget thresholds ([7731e2c](https://github.com/marcusburghardt/ansible-role-ai/commit/7731e2cbb462086c30647a61fa18d76884a60a9e))
+
+
+### Miscellaneous
+
+* allow minor version bumps for feat commits pre-1.0 ([75ab0e5](https://github.com/marcusburghardt/ansible-role-ai/commit/75ab0e5c09f28cd7770ce24ce8031a9353231057))
+* archive 7 completed changes and sync delta specs ([e3f7ac6](https://github.com/marcusburghardt/ansible-role-ai/commit/e3f7ac66508502b27b6873ea6a6a0bbcc49509fc))
+* archive dashboard-pr-analytics (16/16 tasks complete) ([899154f](https://github.com/marcusburghardt/ansible-role-ai/commit/899154f83b10a84499a53a82c155733a7cfddaec))
+* **deps:** Bump actions/checkout from 6.0.2 to 6.0.3 ([33f1836](https://github.com/marcusburghardt/ansible-role-ai/commit/33f1836e42f66b8d086a8b7077c6ac294e849e67))
+* **deps:** Bump actions/checkout from 6.0.2 to 6.0.3 ([b21cdd0](https://github.com/marcusburghardt/ansible-role-ai/commit/b21cdd0184d70274852735025ba1d2fb34c3785c))
+* **deps:** Bump actions/checkout from 6.0.3 to 7.0.1 ([6077f0d](https://github.com/marcusburghardt/ansible-role-ai/commit/6077f0d6f49d25abd87061ef4e6a5879141b567a))
+* **deps:** Bump actions/checkout from 6.0.3 to 7.0.1 ([9594a77](https://github.com/marcusburghardt/ansible-role-ai/commit/9594a77fca4c9a6d3bc67e54c3ae609f809398e0))
+* **deps:** Bump actions/setup-python from 6.2.0 to 7.0.0 ([72be8f3](https://github.com/marcusburghardt/ansible-role-ai/commit/72be8f3f2776dfb966b6635b29a2cbcecca7f06c))
+* **deps:** Bump actions/setup-python from 6.2.0 to 7.0.0 ([74d8da8](https://github.com/marcusburghardt/ansible-role-ai/commit/74d8da8f68d0deb81cec6287c32c3079f9ee8118))
+* **deps:** Bump googleapis/release-please-action from 4.4.1 to 5.0.0 ([17e8993](https://github.com/marcusburghardt/ansible-role-ai/commit/17e89937f5336db0b4a49bfe9ba50ba8505635ca))
+* **deps:** Bump googleapis/release-please-action from 4.4.1 to 5.0.0 ([8a52393](https://github.com/marcusburghardt/ansible-role-ai/commit/8a523935d043603095942222c846bb203c560d96))
+* unbound-force as trusted org in github ([6ce2f64](https://github.com/marcusburghardt/ansible-role-ai/commit/6ce2f64d9d05bafad73ab6473219282a8bfdfc68))
+
+
+### Documentation
+
+* add openspec change artifacts for dashboard-pr-analytics ([87688bf](https://github.com/marcusburghardt/ansible-role-ai/commit/87688bfe51e5636a130d0f86b71beb91595044bb))
+* add openspec change artifacts for dashboard-visual-overhaul ([ff500a5](https://github.com/marcusburghardt/ansible-role-ai/commit/ff500a54fee39766613dbf85e439b8017a0ccbfe))
+* spec for grafana dashboard used for metrics ([e820c92](https://github.com/marcusburghardt/ansible-role-ai/commit/e820c92f4d3d2ca012bc77eda12930127f8c8979))
+
 ## [0.1.1](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.1.0...v0.1.1) (2026-04-17)
 
 
