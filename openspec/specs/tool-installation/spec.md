@@ -1,81 +1,60 @@
-### Requirement: Install system-level dependencies via OS package manager
-The role SHALL provide an `install_dependencies` sub-task that installs system-level prerequisite packages (nodejs, npm, uv) using `ansible.builtin.package` with `become: true`. This task SHALL be disabled by default (`enabled: false` in `ai_tasks`) and positioned first in the task list to ensure prerequisites are present before any tool installation tasks run. The package list SHALL be sourced from the `packages` variable defined in `vars/<os_family>.yml`.
+## ADDED Requirements
 
-#### Scenario: Install dependencies when enabled on RHEL-family
-- **WHEN** the `install_dependencies` task entry has `enabled: true` in `ai_tasks` and the target is a RHEL-family host
-- **THEN** the role installs all packages listed in `vars/redhat.yml` (nodejs, npm, uv) using `ansible.builtin.package` with `become: true` and `state: present`
+### Requirement: Install Ollama as a managed tool
+The role SHALL provide an `install_ollama` entry in `ai_tasks`, enabled by default. The
+task file `tasks/install_ollama.yml` SHALL handle installing Ollama via OS-aware method
+selection (native package or install script) and managing the systemd service. A
+corresponding `vars/install_ollama.yml` file SHALL contain the `_ollama_method_map` that
+maps OS families to install methods, following the same pattern as
+`vars/install_cursor.yml`.
 
-#### Scenario: Skip dependencies by default
-- **WHEN** the `install_dependencies` task entry has `enabled: false` in `ai_tasks` (the default)
-- **THEN** the role SHALL NOT attempt to install any system packages and SHALL assume prerequisites are already present
+#### Scenario: install_ollama is enabled by default in ai_tasks
+- **WHEN** examining the default `ai_tasks` list in `defaults/main.yml`
+- **THEN** the `install_ollama` entry SHALL have `enabled: true`
 
-#### Scenario: Dependencies run before tool installations
-- **WHEN** `install_dependencies` is enabled and `install_opencode` is also enabled
-- **THEN** the `install_dependencies` task SHALL execute before `install_opencode` due to its first position in the `ai_tasks` list
+#### Scenario: Dispatcher loads install_ollama vars and tasks
+- **WHEN** the `install_ollama` task is enabled and the role runs
+- **THEN** the dispatcher SHALL load `vars/install_ollama.yml` (including
+  `_ollama_method_map`) and include `tasks/install_ollama.yml`
 
-### Requirement: Install OpenCode via npm
-The role SHALL install OpenCode (`opencode-ai` npm package) globally using `community.general.npm`. When `ai_opencode_version` is set to `latest`, the role SHALL use `state: latest` to ensure the newest version is installed on every run. When `ai_opencode_version` is set to a specific version string, the role SHALL install that exact version with `state: present`.
+#### Scenario: install_ollama can be disabled
+- **WHEN** the user overrides `ai_tasks` to set `install_ollama` to `enabled: false`
+- **THEN** the role SHALL NOT load its vars or include its tasks
 
-#### Scenario: Install latest OpenCode
-- **WHEN** `ai_opencode_version` is set to `latest` and the `install_opencode` task is enabled
-- **THEN** the role installs `opencode-ai` globally via npm with `state: latest`, ensuring it is updated to the newest version
+### Requirement: Configure Ollama as a managed tool
+The role SHALL provide a `configure_ollama` entry in `ai_tasks`, enabled by default. The
+task file `tasks/configure_ollama.yml` SHALL handle pulling models from the curated list.
+A corresponding `vars/configure_ollama.yml` file SHALL exist to satisfy the dispatcher
+pattern.
 
-#### Scenario: Install pinned OpenCode version
-- **WHEN** `ai_opencode_version` is set to a specific version (e.g., `0.1.50`) and the `install_opencode` task is enabled
-- **THEN** the role installs `opencode-ai` at exactly that version globally via npm with `state: present`
+#### Scenario: configure_ollama is enabled by default in ai_tasks
+- **WHEN** examining the default `ai_tasks` list in `defaults/main.yml`
+- **THEN** the `configure_ollama` entry SHALL have `enabled: true`
 
-#### Scenario: Skip OpenCode installation
-- **WHEN** the `install_opencode` task entry has `enabled: false` in `ai_tasks`
-- **THEN** the role SHALL NOT attempt to install OpenCode
+#### Scenario: Dispatcher loads configure_ollama vars and tasks
+- **WHEN** the `configure_ollama` task is enabled and the role runs
+- **THEN** the dispatcher SHALL load `vars/configure_ollama.yml` and include
+  `tasks/configure_ollama.yml`
 
-### Requirement: Install OpenSPEC via npm
-The role SHALL install OpenSPEC (`@fission-ai/openspec` npm package) globally using `community.general.npm`. Version handling SHALL follow the same `latest` vs pinned pattern as OpenCode, controlled by `ai_openspec_version`.
+#### Scenario: configure_ollama can be disabled independently
+- **WHEN** the user disables `configure_ollama` but keeps `install_ollama` enabled
+- **THEN** the role SHALL install Ollama and manage the service but SHALL NOT pull any
+  models
 
-#### Scenario: Install latest OpenSPEC
-- **WHEN** `ai_openspec_version` is set to `latest` and the `install_openspec` task is enabled
-- **THEN** the role installs `@fission-ai/openspec` globally via npm with `state: latest`
+### Requirement: Ollama installation does not require privilege escalation for model pulling
+The `install_ollama` task SHALL use `become: true` for both install methods (package
+install and install script are both system-level operations). The `configure_ollama` task
+SHALL NOT use `become: true` because `ollama pull` operates against the local Ollama
+service as a regular user.
 
-#### Scenario: Install pinned OpenSPEC version
-- **WHEN** `ai_openspec_version` is set to a specific version and the `install_openspec` task is enabled
-- **THEN** the role installs `@fission-ai/openspec` at that exact version globally via npm with `state: present`
+#### Scenario: Package install runs with become
+- **WHEN** the `install_ollama` task installs via native package manager
+- **THEN** the task SHALL run with `become: true`
 
-#### Scenario: Skip OpenSPEC installation
-- **WHEN** the `install_openspec` task entry has `enabled: false` in `ai_tasks`
-- **THEN** the role SHALL NOT attempt to install OpenSPEC
+#### Scenario: Install script runs with become
+- **WHEN** the `install_ollama` task executes the install script
+- **THEN** the task SHALL run with `become: true`
 
-### Requirement: Install SpecKit via uv from GitHub
-The role SHALL install SpecKit (`specify-cli`) using `uv tool install` from the GitHub repository. When `ai_speckit_version` is set to `latest`, the role SHALL query the GitHub API (`https://api.github.com/repos/github/spec-kit/releases/latest`) to resolve the latest release tag, then install from that tag. When set to a specific tag (e.g., `v0.4.4`), the role SHALL install directly from that tag.
-
-#### Scenario: Install latest SpecKit
-- **WHEN** `ai_speckit_version` is set to `latest` and the `install_speckit` task is enabled
-- **THEN** the role queries the GitHub API to resolve the latest release tag and installs SpecKit from `git+https://github.com/github/spec-kit.git@<resolved_tag>` using `uv tool install --force`
-
-#### Scenario: Install pinned SpecKit version
-- **WHEN** `ai_speckit_version` is set to a specific tag (e.g., `v0.4.4`) and the `install_speckit` task is enabled
-- **THEN** the role installs SpecKit from `git+https://github.com/github/spec-kit.git@v0.4.4` using `uv tool install --force`
-
-#### Scenario: Skip SpecKit installation
-- **WHEN** the `install_speckit` task entry has `enabled: false` in `ai_tasks`
-- **THEN** the role SHALL NOT attempt to install SpecKit
-
-### Requirement: Installation tasks require privilege escalation
-The npm global installation tasks (`install_opencode`, `install_openspec`) SHALL use `become: true` for privilege escalation. The SpecKit installation (`install_speckit`) SHALL NOT use `become: true` because `uv tool install` operates in user space.
-
-#### Scenario: npm tasks use become
-- **WHEN** the `install_opencode` or `install_openspec` task runs
-- **THEN** the npm install task SHALL execute with `become: true`
-
-#### Scenario: SpecKit task runs without become
-- **WHEN** the `install_speckit` task runs
-- **THEN** the uv install command SHALL execute without `become: true`
-
-### Requirement: Ensure required directories exist before installation
-The role SHALL ensure that the `~/.npm` directory and the user scripts directory (`ai_user_scripts_dir`) exist before any installation tasks run. These directory tasks SHALL be included in the relevant install task files.
-
-#### Scenario: npm directory is created
-- **WHEN** the `install_opencode` or `install_openspec` task runs
-- **THEN** the `~/.npm` directory SHALL exist with mode `0750` before npm operations
-
-#### Scenario: Scripts directory is created
-- **WHEN** the `configure_opencode` task runs
-- **THEN** the `ai_user_scripts_dir` directory SHALL exist with mode `0750`
+#### Scenario: Model pulling runs without become
+- **WHEN** the `configure_ollama` task pulls models
+- **THEN** the `ollama pull` commands SHALL execute without `become: true`
