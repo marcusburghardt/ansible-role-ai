@@ -1,0 +1,375 @@
+{% set budget = ai_grafana_metrics_monthly_budget %}
+{% set daily_warn = (budget / 30) | round(2) %}
+{% set daily_crit = (budget / 15) | round(2) %}
+{% set weekly_warn = (budget * 7 / 30) | round(2) %}
+{% set weekly_crit = (budget * 14 / 30) | round(2) %}
+{% set monthly_warn = budget | round(2) %}
+{% set monthly_crit = (budget * 2) | round(2) %}
+{% set yearly_warn = (budget * 12) | round(2) %}
+{% set yearly_crit = (budget * 24) | round(2) %}
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "id": 100, "title": "Key Metrics", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false, "panels": []
+    },
+    {
+      "id": 7, "title": "Today's Cost", "type": "stat", "transparent": true,
+      "description": "Actual cost incurred today (UTC), computed from incremental deltas. Accurately splits multi-day session costs by day. Budget pace: ${{ '%.0f' | format(daily_warn) }}/day (monthly ${{ '%.0f' | format(budget) }}).",
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 1 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }, { "color": "#FADE2A", "value": {{ daily_warn }} }, { "color": "#F2495C", "value": {{ daily_crit }} }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+      "targets": [{ "rawQueryText": "SELECT ROUND(COALESCE(SUM(delta), 0), 2) as \"Today's Cost\" FROM v_measurement_deltas WHERE metric_name = 'cost' AND date(recorded_at_epoch, 'unixepoch') = date('now')", "queryType": "table", "refId": "A" }]
+    },
+    {
+      "id": 8, "title": "Active This Week", "type": "stat", "transparent": true,
+      "description": "Cumulative cost of sessions active since Monday (UTC). Includes the full cost of reused sessions. Budget pace: ${{ '%.0f' | format(weekly_warn) }}/week.",
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 1 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }, { "color": "#FADE2A", "value": {{ weekly_warn }} }, { "color": "#F2495C", "value": {{ weekly_crit }} }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+      "targets": [{ "rawQueryText": "SELECT ROUND(COALESCE(SUM(value), 0), 2) as \"Active This Week\" FROM v_measurements WHERE metric_name = 'cost' AND recorded_at_epoch >= CAST(strftime('%s', date('now', 'weekday 1', '-7 days')) AS INTEGER)", "queryType": "table", "refId": "A" }]
+    },
+    {
+      "id": 9, "title": "Active This Month", "type": "stat", "transparent": true,
+      "description": "Cumulative cost of sessions active since the 1st of this month (UTC). Includes the full cost of reused sessions. Budget: ${{ '%.0f' | format(budget) }}/month.",
+      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 1 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }, { "color": "#FADE2A", "value": {{ monthly_warn }} }, { "color": "#F2495C", "value": {{ monthly_crit }} }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+      "targets": [{ "rawQueryText": "SELECT ROUND(COALESCE(SUM(value), 0), 2) as \"Active This Month\" FROM v_measurements WHERE metric_name = 'cost' AND recorded_at_epoch >= CAST(strftime('%s', date('now', 'start of month')) AS INTEGER)", "queryType": "table", "refId": "A" }]
+    },
+    {
+      "id": 10000, "title": "Active This Year", "type": "stat", "transparent": true,
+      "description": "Cumulative cost of sessions active since January 1st (UTC). Includes the full cost of reused sessions. Budget pace: ${{ '%.0f' | format(yearly_warn) }}/year.",
+      "gridPos": { "h": 4, "w": 5, "x": 15, "y": 1 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }, { "color": "#FADE2A", "value": {{ yearly_warn }} }, { "color": "#F2495C", "value": {{ yearly_crit }} }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+      "targets": [{ "rawQueryText": "SELECT ROUND(COALESCE(SUM(value), 0), 2) as \"Active This Year\" FROM v_measurements WHERE metric_name = 'cost' AND recorded_at_epoch >= CAST(strftime('%s', date('now', 'start of year')) AS INTEGER)", "queryType": "table", "refId": "A" }]
+    },
+    {
+      "id": 2, "title": "Total Cost", "type": "stat", "transparent": true,
+      "description": "All-time cumulative cost across all sessions.",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "fixed", "fixedColor": "#73BF69" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+      "targets": [{ "rawQueryText": "SELECT ROUND(SUM(value), 2) as \"Total Cost\" FROM v_measurements WHERE metric_name = 'cost'", "queryType": "table", "refId": "A" }]
+    },
+    {
+      "id": 1, "title": "Total Sessions", "type": "stat", "transparent": true,
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 5 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#B877D9" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#B877D9", "value": null }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+      "targets": [{ "rawQueryText": "SELECT COUNT(*) as \"Total Sessions\" FROM sessions", "queryType": "table", "refId": "A" }]
+    },
+    {
+      "id": 3, "title": "Avg Session Cost", "type": "stat", "transparent": true,
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 5 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }, { "color": "#FADE2A", "value": {{ (daily_warn / 3) | round(2) }} }, { "color": "#F2495C", "value": {{ daily_warn | round(2) }} }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+      "targets": [{ "rawQueryText": "SELECT ROUND(AVG(value), 4) as \"Avg Cost\" FROM v_measurements WHERE metric_name = 'cost'", "queryType": "table", "refId": "A" }]
+    },
+    {
+      "id": 4, "title": "Cache Hit %", "type": "stat", "transparent": true,
+      "description": "Fraction of input tokens served from prompt cache. Higher is better -- cached tokens cost less.",
+      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 5 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "percent", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#F2495C", "value": null }, { "color": "#FADE2A", "value": 30 }, { "color": "#73BF69", "value": 60 }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+      "targets": [{ "rawQueryText": "SELECT ROUND(AVG(value) * 100, 1) as \"Cache Hit\" FROM v_measurements WHERE metric_name = 'cache_hit_ratio'", "queryType": "table", "refId": "A" }]
+    },
+    {
+      "id": 5, "title": "Output Tokens (M)", "type": "stat", "transparent": true,
+      "description": "Total output tokens generated across all sessions, in millions.",
+      "gridPos": { "h": 4, "w": 5, "x": 15, "y": 5 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#5794F2" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#5794F2", "value": null }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+      "targets": [{ "rawQueryText": "SELECT ROUND(SUM(value) / 1000000, 1) as \"Output Tokens (M)\" FROM v_measurements WHERE metric_name = 'tokens_output'", "queryType": "table", "refId": "A" }]
+    },
+    {
+      "id": 6, "title": "Active Projects", "type": "stat", "transparent": true,
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 5 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#36A2EB" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#36A2EB", "value": null }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+      "targets": [{ "rawQueryText": "SELECT COUNT(DISTINCT project_id) as \"Projects\" FROM sessions", "queryType": "table", "refId": "A" }]
+    },
+
+    {
+      "id": 101, "title": "Cost Overview", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 10, "title": "Daily Cost", "type": "timeseries", "transparent": true,
+          "description": "Actual cost incurred per day, computed from incremental deltas. Accurately splits multi-day session costs. Spikes indicate expensive sessions -- expand Top Sessions to investigate. Historical data before the delta feature was deployed may appear empty.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "fixed", "fixedColor": "#73BF69" }, "custom": { "drawStyle": "bars", "fillOpacity": 40, "gradientMode": "scheme", "pointSize": 5, "lineWidth": 1 } }, "overrides": [] },
+          "options": { "tooltip": { "mode": "single" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "last"] } },
+          "targets": [{ "rawQueryText": "SELECT MIN(recorded_at_epoch) as time, SUM(delta) as cost FROM v_measurement_deltas WHERE metric_name = 'cost' AND recorded_at_epoch >= $__from/1000 AND recorded_at_epoch <= $__to/1000 GROUP BY date(recorded_at_epoch, 'unixepoch') ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "A" }]
+        },
+        {
+          "id": 11, "title": "Cost by Classification", "type": "piechart", "transparent": true,
+          "description": "Cost breakdown by session type. Helps identify which types of work drive the most spending.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "palette-classic" } }, "overrides": [] },
+          "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "tooltip": { "mode": "single" }, "pieType": "donut", "displayLabels": ["name", "value"], "reduceOptions": { "values": true, "calcs": [] } },
+          "targets": [{ "rawQueryText": "SELECT s.classification, SUM(m.value) as cost FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id WHERE m.metric_name = 'cost' GROUP BY s.classification ORDER BY cost DESC", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 12, "title": "Cost by Model", "type": "barchart", "transparent": true,
+          "description": "Total cost per model. Models marked 'unknown' indicate sessions where the model was not detected by the metrics plugin.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "fixed", "fixedColor": "#73BF69" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
+          "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT s.model, SUM(m.value) as cost FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id WHERE m.metric_name = 'cost' GROUP BY s.model ORDER BY cost DESC", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 13, "title": "Cost by Project (Top 10)", "type": "barchart", "transparent": true,
+          "description": "Top 10 projects by total API cost. Edit this panel and adjust the LIMIT in the query to see more projects.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "fixed", "fixedColor": "#73BF69" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
+          "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT p.name as project, SUM(m.value) as cost FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id JOIN projects p ON s.project_id = p.project_id WHERE m.metric_name = 'cost' AND p.name != '' GROUP BY p.name ORDER BY cost DESC LIMIT 10", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 14, "title": "Avg Cost per Session by Classification", "type": "barchart", "transparent": true,
+          "description": "Average cost of a single session for each classification. Helps set expectations for how much each type of work typically costs.",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 22 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "fixed", "fixedColor": "#FADE2A" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
+          "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT s.classification, AVG(m.value) as avg_cost FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id WHERE m.metric_name = 'cost' GROUP BY s.classification ORDER BY avg_cost DESC", "queryType": "table", "refId": "A" }]
+        }
+      ]
+    },
+
+    {
+      "id": 102, "title": "Token Efficiency", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 20, "title": "Token Usage Over Time", "type": "timeseries", "transparent": true,
+          "description": "Daily token consumption by type. Input = prompt context, Output = generated responses, Cache Read = tokens served from prompt cache. Cache read often dominates the scale -- click series names in the legend to toggle visibility.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 20, "pointSize": 5, "lineWidth": 2, "lineInterpolation": "smooth" } }, "overrides": [{ "matcher": { "id": "byName", "options": "tokens_input" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#5794F2" } }] }, { "matcher": { "id": "byName", "options": "tokens_output" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#73BF69" } }] }, { "matcher": { "id": "byName", "options": "tokens_cache_read" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#B877D9" } }] }] },
+          "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum", "mean", "max"] } },
+          "targets": [{ "rawQueryText": "SELECT MIN(recorded_at_epoch) as time, metric_name, SUM(value) as tokens FROM v_measurements WHERE metric_name IN ('tokens_input', 'tokens_output', 'tokens_cache_read') AND recorded_at_epoch >= $__from/1000 AND recorded_at_epoch <= $__to/1000 GROUP BY date(recorded_at_epoch, 'unixepoch'), metric_name ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "A" }]
+        },
+        {
+          "id": 21, "title": "Token Distribution by Type", "type": "barchart", "transparent": true,
+          "description": "Total tokens by type across all sessions. A high cache_read value indicates good prompt cache utilization. Bar chart used instead of pie because the scale difference between token types can be extreme.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "#5794F2" }, "custom": { "fillOpacity": 80 } }, "overrides": [] },
+          "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT metric_name as token_type, SUM(value) as total FROM v_measurements WHERE metric_name IN ('tokens_input', 'tokens_output', 'tokens_reasoning', 'tokens_cache_read', 'tokens_cache_write') GROUP BY metric_name ORDER BY total DESC", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 22, "title": "Cache Hit Ratio Over Time", "type": "timeseries", "transparent": true,
+          "description": "Fraction of input tokens served from prompt cache. Higher is better -- cached tokens cost less. Drops may indicate new projects or changed prompts that invalidate the cache.",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 15 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "color": { "mode": "fixed", "fixedColor": "#5794F2" }, "custom": { "drawStyle": "line", "fillOpacity": 20, "gradientMode": "scheme", "pointSize": 5, "lineWidth": 2 } }, "overrides": [] },
+          "options": { "tooltip": { "mode": "single" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "mean", "max"] } },
+          "targets": [{ "rawQueryText": "SELECT MIN(recorded_at_epoch) as time, AVG(value) as cache_hit_ratio FROM v_measurements WHERE metric_name = 'cache_hit_ratio' AND recorded_at_epoch >= $__from/1000 AND recorded_at_epoch <= $__to/1000 GROUP BY date(recorded_at_epoch, 'unixepoch') ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "A" }]
+        }
+      ]
+    },
+
+    {
+      "id": 103, "title": "Session Analytics", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 11 },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 30, "title": "Sessions by Day", "type": "timeseries", "transparent": true,
+          "description": "Number of sessions per day. Tracks overall AI tool usage intensity.",
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#B877D9" }, "custom": { "drawStyle": "bars", "fillOpacity": 50, "gradientMode": "scheme" } }, "overrides": [] },
+          "options": { "tooltip": { "mode": "single" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum", "mean", "max"] } },
+          "targets": [{ "rawQueryText": "SELECT MIN(started_at_epoch) as time, COUNT(*) as sessions FROM v_sessions WHERE started_at_epoch >= $__from/1000 AND started_at_epoch <= $__to/1000 GROUP BY date(started_at_epoch, 'unixepoch') ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "A" }]
+        },
+        {
+          "id": 31, "title": "Sessions by Classification Over Time", "type": "timeseries", "transparent": true,
+          "description": "Daily session breakdown by classification. Shows how your work type mix evolves -- widening bands indicate growing reliance on that classification.",
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } } }, "overrides": [] },
+          "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum"] } },
+          "targets": [{ "rawQueryText": "SELECT MIN(started_at_epoch) as time, classification, COUNT(*) as count FROM v_sessions WHERE started_at_epoch >= $__from/1000 AND started_at_epoch <= $__to/1000 GROUP BY date(started_at_epoch, 'unixepoch'), classification ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "A" }]
+        },
+        {
+          "id": 32, "title": "Duration Distribution", "type": "barchart", "transparent": true,
+          "description": "Session length distribution. Most sessions should be short; long sessions may indicate complex or stuck tasks.",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#B877D9" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
+          "options": { "orientation": "vertical", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT CASE WHEN value < 60 THEN '< 1 min' WHEN value < 300 THEN '1-5 min' WHEN value < 900 THEN '5-15 min' WHEN value < 1800 THEN '15-30 min' WHEN value < 3600 THEN '30-60 min' ELSE '> 60 min' END as duration_bucket, COUNT(*) as count FROM v_measurements WHERE metric_name = 'duration_seconds' GROUP BY duration_bucket ORDER BY MIN(value)", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 33, "title": "Sessions by Agent Type", "type": "piechart", "transparent": true,
+          "description": "Distribution of sessions by agent (e.g. OpenCode, Cursor, Claude CLI). Shows which tools are being used most.",
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] },
+          "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "tooltip": { "mode": "single" }, "pieType": "donut", "displayLabels": ["name", "value"], "reduceOptions": { "values": true, "calcs": [] } },
+          "targets": [{ "rawQueryText": "SELECT agent, COUNT(*) as count FROM sessions GROUP BY agent ORDER BY count DESC", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 34, "title": "Avg Duration by Classification", "type": "barchart", "transparent": true,
+          "description": "Average session duration per classification. Longer sessions are not necessarily bad -- complex tasks take time.",
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "m", "color": { "mode": "fixed", "fixedColor": "#B877D9" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
+          "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT s.classification, AVG(m.value) / 60 as avg_minutes FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id WHERE m.metric_name = 'duration_seconds' GROUP BY s.classification ORDER BY avg_minutes DESC", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 35, "title": "Messages per Classification", "type": "barchart", "transparent": true,
+          "description": "Average, minimum, and maximum message count per classification. High message counts may indicate iterative conversations.",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [{ "matcher": { "id": "byName", "options": "avg_messages" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#B877D9" } }] }, { "matcher": { "id": "byName", "options": "min_messages" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#5794F2" } }] }, { "matcher": { "id": "byName", "options": "max_messages" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#F2495C" } }] }] },
+          "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT s.classification, AVG(m.value) as avg_messages, MIN(m.value) as min_messages, MAX(m.value) as max_messages FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id WHERE m.metric_name = 'messages_total' GROUP BY s.classification ORDER BY avg_messages DESC", "queryType": "table", "refId": "A" }]
+        }
+      ]
+    },
+
+    {
+      "id": 104, "title": "Efficiency", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 12 },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 40, "title": "Cost per 1K Output Tokens", "type": "stat", "transparent": true,
+          "description": "Effective cost per 1,000 output tokens across all sessions. Lower is better -- affected by model choice and cache efficiency.",
+          "gridPos": { "h": 6, "w": 8, "x": 0, "y": 9 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }, { "color": "#FF9830", "value": 0.05 }, { "color": "#F2495C", "value": 0.15 }] } }, "overrides": [] },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none", "textMode": "auto" },
+          "targets": [{ "rawQueryText": "SELECT ROUND(cost_total / NULLIF(tokens_out, 0) * 1000, 4) as \"$/1K output tokens\" FROM (SELECT SUM(CASE WHEN metric_name = 'cost' THEN value END) as cost_total, SUM(CASE WHEN metric_name = 'tokens_output' THEN value END) as tokens_out FROM v_measurements)", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 41, "title": "Cache Hit by Classification", "type": "barchart", "transparent": true,
+          "description": "Average cache hit ratio per classification. Higher means more input tokens are served from cache, reducing cost. Low values suggest new or varied prompts.",
+          "gridPos": { "h": 6, "w": 8, "x": 8, "y": 9 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "color": { "mode": "palette-classic" }, "custom": { "fillOpacity": 80 } }, "overrides": [] },
+          "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT s.classification, AVG(m.value) as avg_cache_ratio, COUNT(*) as sessions FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id WHERE m.metric_name = 'cache_hit_ratio' GROUP BY s.classification ORDER BY avg_cache_ratio DESC", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 42, "title": "Cost per File Changed", "type": "stat", "transparent": true,
+          "description": "Average cost to change one file. Lower indicates more efficient code generation. Affected by session complexity and model choice.",
+          "gridPos": { "h": 6, "w": 8, "x": 16, "y": 9 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }, { "color": "#FF9830", "value": 1 }, { "color": "#F2495C", "value": 5 }] } }, "overrides": [] },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none", "textMode": "auto" },
+          "targets": [{ "rawQueryText": "SELECT ROUND(cost_total / NULLIF(files_total, 0), 2) as \"$ per file changed\" FROM (SELECT SUM(CASE WHEN metric_name = 'cost' THEN value END) as cost_total, SUM(CASE WHEN metric_name = 'files_changed' THEN value END) as files_total FROM v_measurements)", "queryType": "table", "refId": "A" }]
+        }
+      ]
+    },
+
+    {
+      "id": 105, "title": "Code Impact", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 50, "title": "Lines Changed Over Time", "type": "timeseries", "transparent": true,
+          "description": "Daily lines added and deleted. Green is added, red is deleted. Empty in recent dates means the metrics plugin was not tracking line changes during that period.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 20, "pointSize": 5, "lineWidth": 2, "lineInterpolation": "smooth", "stacking": { "mode": "normal" } } }, "overrides": [{ "matcher": { "id": "byName", "options": "lines_added" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#73BF69" } }] }, { "matcher": { "id": "byName", "options": "lines_deleted" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#F2495C" } }] }] },
+          "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum", "mean", "max"] } },
+          "targets": [{ "rawQueryText": "SELECT MIN(recorded_at_epoch) as time, metric_name, SUM(value) as lines FROM v_measurements WHERE metric_name IN ('lines_added', 'lines_deleted') AND recorded_at_epoch >= $__from/1000 AND recorded_at_epoch <= $__to/1000 GROUP BY date(recorded_at_epoch, 'unixepoch'), metric_name ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "A" }]
+        },
+        {
+          "id": 51, "title": "Files Changed by Project (Top 10)", "type": "barchart", "transparent": true,
+          "description": "Top 10 projects by total files changed. Edit this panel and adjust the LIMIT in the query to see more projects.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#36A2EB" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
+          "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT p.name as project, SUM(m.value) as files_changed FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id JOIN projects p ON s.project_id = p.project_id WHERE m.metric_name = 'files_changed' AND p.name != '' GROUP BY p.name ORDER BY files_changed DESC LIMIT 10", "queryType": "table", "refId": "A" }]
+        }
+      ]
+    },
+
+    {
+      "id": 106, "title": "Top Sessions", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 60, "title": "Top Sessions by Cost", "type": "table", "transparent": true,
+          "description": "Most expensive individual sessions. Use this to investigate cost spikes seen in the Daily Cost panel.",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 11 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": {}, "overrides": [{ "matcher": { "id": "byName", "options": "cost" }, "properties": [{ "id": "unit", "value": "currencyUSD" }, { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "transparent", "value": null }, { "color": "#FADE2A33", "value": {{ daily_warn }} }, { "color": "#F2495C33", "value": {{ daily_crit }} }] } }] }, { "matcher": { "id": "byName", "options": "date" }, "properties": [{ "id": "displayName", "value": "Date" }] }] },
+          "options": { "showHeader": true, "sortBy": [{ "displayName": "cost", "desc": true }] },
+          "targets": [{ "rawQueryText": "SELECT s.title, s.classification, s.model, s.agent, p.name as project, ROUND(m.value, 4) as cost, s.started_at_iso as date FROM v_sessions s JOIN v_measurements m ON s.session_id = m.session_id LEFT JOIN projects p ON s.project_id = p.project_id WHERE m.metric_name = 'cost' ORDER BY m.value DESC LIMIT 20", "queryType": "table", "refId": "A" }]
+        }
+      ]
+    },
+
+    {
+      "id": 107, "title": "Trends", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 70, "title": "Weekly Cost Trend", "type": "timeseries", "transparent": true,
+          "description": "Total cost per calendar week. Useful for tracking spending patterns and setting weekly budgets.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "fixed", "fixedColor": "#FADE2A" }, "custom": { "drawStyle": "line", "fillOpacity": 15, "pointSize": 5, "lineWidth": 2, "lineInterpolation": "smooth" } }, "overrides": [] },
+          "options": { "tooltip": { "mode": "single" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum", "mean", "max"] } },
+          "targets": [{ "rawQueryText": "SELECT MIN(recorded_at_epoch) as time, SUM(delta) as cost FROM v_measurement_deltas WHERE metric_name = 'cost' GROUP BY strftime('%Y-W%W', datetime(recorded_at_epoch, 'unixepoch')) ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "A" }]
+        },
+        {
+          "id": 71, "title": "7-Day Rolling Average Cost", "type": "timeseries", "transparent": true,
+          "description": "Smoothed daily cost trend (7-day window). Removes day-to-day noise to show whether spending is increasing or decreasing over time.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "fixed", "fixedColor": "#FADE2A" }, "custom": { "drawStyle": "line", "fillOpacity": 15, "gradientMode": "scheme", "pointSize": 3, "lineWidth": 2, "lineInterpolation": "smooth" } }, "overrides": [] },
+          "options": { "tooltip": { "mode": "single" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "mean", "max"] } },
+          "targets": [{ "rawQueryText": "SELECT recorded_at_epoch as time, AVG(daily_cost) OVER (ORDER BY day ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) as rolling_avg FROM (SELECT date(recorded_at_epoch, 'unixepoch') as day, MIN(recorded_at_epoch) as recorded_at_epoch, SUM(delta) as daily_cost FROM v_measurement_deltas WHERE metric_name = 'cost' GROUP BY day) ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "A" }]
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["opencode", "metrics"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "OpenCode Metrics",
+  "uid": "opencode-metrics-dashboard",
+  "version": 10
+}
