@@ -360,6 +360,107 @@
           "targets": [{ "rawQueryText": "SELECT recorded_at_epoch as time, AVG(daily_cost) OVER (ORDER BY day ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) as rolling_avg FROM (SELECT date(recorded_at_epoch, 'unixepoch') as day, MIN(recorded_at_epoch) as recorded_at_epoch, SUM(delta) as daily_cost FROM v_measurement_deltas WHERE metric_name = 'cost' GROUP BY day) ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "A" }]
         }
       ]
+    },
+
+    {
+      "id": 108, "title": "PR & Issue Analytics", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 80, "title": "PRs Created", "type": "stat", "transparent": true,
+          "description": "Total number of PRs created across all sessions in the selected time range.",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 13 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#FF7F50" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#FF7F50", "value": null }] } }, "overrides": [] },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+          "targets": [{ "rawQueryText": "SELECT COALESCE(SUM(value), 0) as \"PRs Created\" FROM v_measurements WHERE metric_name = 'prs_created' AND recorded_at_epoch BETWEEN $__from/1000 AND $__to/1000", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 81, "title": "PRs Reviewed", "type": "stat", "transparent": true,
+          "description": "Total number of PRs reviewed across all sessions in the selected time range.",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 13 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#4ECDC4" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#4ECDC4", "value": null }] } }, "overrides": [] },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+          "targets": [{ "rawQueryText": "SELECT COALESCE(SUM(value), 0) as \"PRs Reviewed\" FROM v_measurements WHERE metric_name = 'prs_reviewed' AND recorded_at_epoch BETWEEN $__from/1000 AND $__to/1000", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 82, "title": "Avg Cost per PR", "type": "stat", "transparent": true,
+          "description": "Average cost per PR created. Total cost divided by total PRs for sessions with at least one PR.",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 13 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }, { "color": "#FADE2A", "value": 5 }, { "color": "#F2495C", "value": 20 }] } }, "overrides": [] },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+          "targets": [{ "rawQueryText": "SELECT ROUND(SUM(c.value) / NULLIF(SUM(p.value), 0), 2) as \"Avg Cost per PR\" FROM v_measurements c JOIN v_measurements p ON c.session_id = p.session_id WHERE c.metric_name = 'cost' AND p.metric_name = 'prs_created' AND p.value > 0 AND c.recorded_at_epoch BETWEEN $__from/1000 AND $__to/1000", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 83, "title": "Sessions with PRs", "type": "stat", "transparent": true,
+          "description": "Number of sessions that created at least one PR in the selected time range.",
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 13 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#FF7F50" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#FF7F50", "value": null }] } }, "overrides": [] },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+          "targets": [{ "rawQueryText": "SELECT COUNT(DISTINCT session_id) as \"Sessions with PRs\" FROM v_measurements WHERE metric_name = 'prs_created' AND value > 0 AND recorded_at_epoch BETWEEN $__from/1000 AND $__to/1000", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 84, "title": "PR Activity Over Time", "type": "timeseries", "transparent": true,
+          "description": "Daily PRs created and reviewed using incremental deltas. Shows PR activity patterns over time.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 40, "gradientMode": "scheme", "pointSize": 5, "lineWidth": 1 } }, "overrides": [{ "matcher": { "id": "byName", "options": "PRs Created" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#FF7F50" } }] }, { "matcher": { "id": "byName", "options": "PRs Reviewed" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#4ECDC4" } }] }] },
+          "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum", "mean", "max"] } },
+          "targets": [
+            { "rawQueryText": "SELECT MIN(recorded_at_epoch) as time, SUM(delta) as \"PRs Created\" FROM v_measurement_deltas WHERE metric_name = 'prs_created' AND recorded_at_epoch >= $__from/1000 AND recorded_at_epoch <= $__to/1000 GROUP BY date(recorded_at_epoch, 'unixepoch') ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "A" },
+            { "rawQueryText": "SELECT MIN(recorded_at_epoch) as time, SUM(delta) as \"PRs Reviewed\" FROM v_measurement_deltas WHERE metric_name = 'prs_reviewed' AND recorded_at_epoch >= $__from/1000 AND recorded_at_epoch <= $__to/1000 GROUP BY date(recorded_at_epoch, 'unixepoch') ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "B" }
+          ]
+        },
+        {
+          "id": 85, "title": "Cost per PR Trend", "type": "timeseries", "transparent": true,
+          "description": "Weekly average cost per PR created. Shows whether AI-assisted PR creation is getting cheaper over time.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "fixed", "fixedColor": "#FF7F50" }, "custom": { "drawStyle": "line", "fillOpacity": 15, "gradientMode": "scheme", "pointSize": 5, "lineWidth": 2, "lineInterpolation": "smooth" } }, "overrides": [] },
+          "options": { "tooltip": { "mode": "single" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "mean", "max"] } },
+          "targets": [{ "rawQueryText": "SELECT MIN(c.recorded_at_epoch) as time, SUM(c.delta) / NULLIF(SUM(p.delta), 0) as cost_per_pr FROM v_measurement_deltas c JOIN v_measurement_deltas p ON c.session_id = p.session_id AND p.metric_name = 'prs_created' WHERE c.metric_name = 'cost' GROUP BY strftime('%Y-W%W', datetime(c.recorded_at_epoch, 'unixepoch')) ORDER BY time", "queryType": "table", "timeColumns": ["time"], "refId": "A" }]
+        },
+        {
+          "id": 86, "title": "PR Activity by Classification", "type": "barchart", "transparent": true,
+          "description": "Which session classifications produce the most PRs. Helps identify the most productive session types.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#FF7F50" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
+          "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT s.classification, SUM(m.value) as prs FROM v_measurements m JOIN v_sessions s ON m.session_id = s.session_id WHERE m.metric_name = 'prs_created' AND m.value > 0 GROUP BY 1 ORDER BY 2 DESC", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 87, "title": "PRs per Session", "type": "barchart", "transparent": true,
+          "description": "Distribution of how many PRs each session creates. Shows batching efficiency -- most sessions create 0-1 PRs.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#FF7F50" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
+          "options": { "orientation": "vertical", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT CASE WHEN value >= 3 THEN '3+' ELSE CAST(CAST(value AS INTEGER) AS TEXT) END as prs, COUNT(*) as sessions FROM v_measurements WHERE metric_name = 'prs_created' GROUP BY 1 ORDER BY 1", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 88, "title": "Non-Deliverable Spend", "type": "stat", "transparent": true,
+          "description": "Percentage of total cost from sessions with zero PRs and zero issues. Highlights sessions that consumed resources without producing trackable deliverables.",
+          "gridPos": { "h": 6, "w": 12, "x": 0, "y": 33 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "percent", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }, { "color": "#FADE2A", "value": 50 }, { "color": "#F2495C", "value": 80 }] } }, "overrides": [] },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none", "textMode": "auto" },
+          "targets": [{ "rawQueryText": "SELECT ROUND(100.0 * SUM(CASE WHEN p.value = 0 AND i.value = 0 THEN c.value ELSE 0 END) / NULLIF(SUM(c.value), 0), 0) as \"Non-Deliverable Spend\" FROM v_measurements c JOIN v_measurements p ON c.session_id = p.session_id JOIN v_measurements i ON c.session_id = i.session_id WHERE c.metric_name = 'cost' AND p.metric_name = 'prs_created' AND i.metric_name = 'issues_referenced'", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 89, "title": "Most Expensive PRs", "type": "table", "transparent": true,
+          "description": "Top 10 PRs by total cost across all sessions. Shows which PRs consumed the most resources.",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 39 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": {}, "overrides": [{ "matcher": { "id": "byName", "options": "total_cost" }, "properties": [{ "id": "unit", "value": "currencyUSD" }, { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "transparent", "value": null }, { "color": "#FF7F5033", "value": 1 }, { "color": "#F2495C33", "value": 10 }] } }] }] },
+          "options": { "showHeader": true, "sortBy": [{ "displayName": "total_cost", "desc": true }] },
+          "targets": [{ "rawQueryText": "SELECT a.reference, ROUND(SUM(c.value), 2) as total_cost, COUNT(DISTINCT a.session_id) as sessions FROM v_session_artifacts a JOIN v_measurements c ON a.session_id = c.session_id WHERE a.artifact_type IN ('pr-created', 'pr-reviewed') AND c.metric_name = 'cost' GROUP BY 1 ORDER BY 2 DESC LIMIT 10", "queryType": "table", "refId": "A" }]
+        }
+      ]
     }
   ],
   "refresh": "30s",
