@@ -93,6 +93,6 @@
 - [x] 6.1 Run make lint — YAML lint passes on the template
 - [x] 6.2 Validate the JSON template renders correctly:
   ensure no Jinja2 syntax errors and valid JSON output
-- [ ] 6.3 Visual verification: provision the dashboard in a local
+- [x] 6.3 Visual verification: provision the dashboard in a local
   Grafana instance and confirm all panels render with data from a
   backfilled database
