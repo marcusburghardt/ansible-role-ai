@@ -60,7 +60,8 @@ Take a look in the Example Playbook section.
 | `ai_opencode_agent_explore_model` | `{{ ai_small_model }}` | Model for explore agent |
 | `ai_opencode_agent_general_model` | `{{ ai_small_model }}` | Model for general agent |
 | `ai_opencode_agents` | See defaults | Full agent routing dict (rendered into `opencode.json`) |
-| `ai_opencode_metrics_version` | `0.2.0` | Pinned version of the `@mburghardt/opencode-metrics` plugin |
+| `ai_opencode_metrics_version` | `0.2.0` | Pinned version of the `@mburghardt/opencode-metrics` plugin (set to `"local"` for local dev) |
+| `ai_opencode_metrics_local_path` | `""` | Path to local opencode-metrics repo (only used when version is `"local"`) |
 | `ai_opencode_metrics_config` | `{}` | Optional metrics plugin config dict (deployed as `config.yaml` when non-empty) |
 | `ai_opencode_metrics_data_dir` | `~/.local/share/opencode-metrics` | Metrics plugin data directory (bind-mounted into Grafana container) |
 | `ai_opencode_plugins` | `["@mburghardt/opencode-metrics@..."]` | List of npm plugin packages for OpenCode (metrics plugin included by default) |
@@ -273,6 +274,37 @@ ai_opencode_plugins: []
 
 OpenCode installs npm plugins automatically at startup. Plugin-specific configuration
 files (e.g., `dcp.jsonc`) are managed by the user outside this role.
+
+**Local development of opencode-metrics:**
+
+When developing the `opencode-metrics` plugin locally, you can bypass npm and load the
+plugin directly from a local repository checkout. This avoids publishing a new release
+for every change during development.
+
+Workflow:
+
+1. Make code changes in your local `opencode-metrics` repository
+2. Build the plugin: `make build` (produces `dist/index.js`)
+3. Set the role variables in your playbook:
+   ```yaml
+   ai_opencode_metrics_version: "local"
+   ai_opencode_metrics_local_path: "~/GIT/me/opencode-metrics"
+   ```
+4. Run the playbook to deploy the loader file
+5. Restart OpenCode to pick up the changes
+
+The role writes a TypeScript loader file at `~/.config/opencode/plugins/opencode-metrics.ts`
+that imports the plugin from the local path, and removes the npm entry from `opencode.json`.
+A leading `~` in the path is expanded to the target user's home directory.
+
+**Switching back to npm mode:**
+
+To switch back from local to npm-managed installation:
+
+1. Set `ai_opencode_metrics_version` back to a semver string (e.g., `"0.2.0"`) or `"latest"`
+2. Remove or leave `ai_opencode_metrics_local_path` as-is (it is ignored in npm mode)
+3. Run the playbook -- the loader file is removed automatically and the npm entry is
+   restored in `opencode.json`
 
 **Metrics plugin configuration (optional):**
 

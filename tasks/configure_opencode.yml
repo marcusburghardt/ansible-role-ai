@@ -110,6 +110,45 @@
     label: "{{ item.name | default(item.src | basename) }}"
   when: ai_opencode_skills_custom | length > 0
 
+- name: "{{ role_name }} | {{ task.name }} | Validate local metrics plugin path"
+  ansible.builtin.fail:
+    msg: >-
+      ai_opencode_metrics_local_path must be set when
+      ai_opencode_metrics_version is "local".
+  when:
+    - ai_opencode_metrics_version == 'local'
+    - ai_opencode_metrics_local_path | length == 0
+
+- name: "{{ role_name }} | {{ task.name }} | Report metrics plugin state"
+  ansible.builtin.debug:
+    msg: >-
+      Metrics plugin:
+      mode={{ 'local' if ai_opencode_metrics_version == 'local' else 'npm' }},
+      version={{ ai_opencode_metrics_version }},
+      source={{ _ai_metrics_local_path_expanded + '/dist/index.js'
+                if ai_opencode_metrics_version == 'local'
+                else '@mburghardt/opencode-metrics@' + ai_opencode_metrics_version }},
+      config_deployed={{ ai_opencode_metrics_config | length > 0 }}
+
+- name: "{{ role_name }} | {{ task.name }} | Ensure OpenCode plugins directory"
+  ansible.builtin.file:
+    path: "{{ ai_opencode_config_dir }}/plugins"
+    state: directory
+    mode: "0750"
+
+- name: "{{ role_name }} | {{ task.name }} | Remove metrics plugin loader (npm mode)"
+  ansible.builtin.file:
+    path: "{{ ai_opencode_config_dir }}/plugins/opencode-metrics.ts"
+    state: absent
+  when: ai_opencode_metrics_version != 'local'
+
+- name: "{{ role_name }} | {{ task.name }} | Deploy metrics plugin loader (local mode)"
+  ansible.builtin.template:
+    src: opencode_metrics_plugin_loader.ts.j2
+    dest: "{{ ai_opencode_config_dir }}/plugins/opencode-metrics.ts"
+    mode: "0640"
+  when: ai_opencode_metrics_version == 'local'
+
 - name: "{{ role_name }} | {{ task.name }} | Ensure metrics plugin data directory"
   ansible.builtin.file:
     path: "{{ ai_opencode_metrics_data_dir }}"

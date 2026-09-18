@@ -8,3 +8,11 @@ ai_opencode_skills_deploy_dir: >-
   {{ ai_user_home_dir + '/.agents/skills'
      if ai_skills_target == 'agent-neutral'
      else ai_opencode_skills_dir }}
+
+# Expanded absolute path for the local opencode-metrics repository.
+# Replaces a leading ~ with ai_user_home_dir. Empty when the user has
+# not set ai_opencode_metrics_local_path.
+_ai_metrics_local_path_expanded: >-
+  {{ ai_opencode_metrics_local_path | regex_replace('^~', ai_user_home_dir)
+     if ai_opencode_metrics_local_path | length > 0
+     else '' }}
