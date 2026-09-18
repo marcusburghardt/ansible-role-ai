@@ -129,8 +129,14 @@ ai_opencode_disabled_providers: []
 
 # OpenCode metrics plugin
 # Pinned version of @mburghardt/opencode-metrics. Updated manually when
-# the plugin releases a new version.
+# the plugin releases a new version. Set to "local" to load the plugin
+# from a local repository path (see ai_opencode_metrics_local_path).
 ai_opencode_metrics_version: "0.2.0"
+
+# Path to a local opencode-metrics repository on the target host.
+# Only used when ai_opencode_metrics_version is "local". A leading tilde
+# (~) is expanded to the target user's home directory by the role.
+ai_opencode_metrics_local_path: ""
 
 # Optional metrics plugin configuration. When non-empty, the role deploys
 # config.yaml to ai_opencode_metrics_data_dir. When empty (default), the
@@ -139,10 +145,13 @@ ai_opencode_metrics_config: {}
 
 # OpenCode plugins
 # List of npm plugin packages for OpenCode. The metrics plugin is included by
-# default. Override to add, remove, or replace plugins.
+# default in npm mode. In local mode (version == "local"), the npm entry is
+# excluded and the plugin is loaded via a TypeScript loader file instead.
+# Override to add, remove, or replace plugins.
 # OpenCode installs plugins automatically at startup via Bun.
-ai_opencode_plugins:
-  - "@mburghardt/opencode-metrics@{{ ai_opencode_metrics_version }}"
+ai_opencode_plugins: >-
+  {{ [] if ai_opencode_metrics_version == 'local'
+     else ['@mburghardt/opencode-metrics@' + ai_opencode_metrics_version] }}
 
 # OpenCode configuration
 ai_opencode_config_dir: "{{ ai_user_home_dir }}/.config/opencode"
