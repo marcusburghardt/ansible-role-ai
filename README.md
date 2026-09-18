@@ -60,7 +60,10 @@ Take a look in the Example Playbook section.
 | `ai_opencode_agent_explore_model` | `{{ ai_small_model }}` | Model for explore agent |
 | `ai_opencode_agent_general_model` | `{{ ai_small_model }}` | Model for general agent |
 | `ai_opencode_agents` | See defaults | Full agent routing dict (rendered into `opencode.json`) |
-| `ai_opencode_plugins` | `[]` | Opt-in list of npm plugin packages for OpenCode |
+| `ai_opencode_metrics_version` | `0.2.0` | Pinned version of the `@mburghardt/opencode-metrics` plugin |
+| `ai_opencode_metrics_config` | `{}` | Optional metrics plugin config dict (deployed as `config.yaml` when non-empty) |
+| `ai_opencode_metrics_data_dir` | `~/.local/share/opencode-metrics` | Metrics plugin data directory (bind-mounted into Grafana container) |
+| `ai_opencode_plugins` | `["@mburghardt/opencode-metrics@..."]` | List of npm plugin packages for OpenCode (metrics plugin included by default) |
 | `ai_opencode_compaction` | See defaults | Compaction settings dict (`auto`, `prune`, `reserved`) |
 | `ai_opencode_providers` | See defaults | Provider catalog for OpenCode (rendered into `opencode.json`) |
 | `ai_opencode_ollama_models` | See defaults | Ollama models visible in OpenCode (subset of pulled models) |
@@ -83,7 +86,6 @@ Take a look in the Example Playbook section.
 | `ai_grafana_metrics_port` | `3033` | Host port for the Grafana container |
 | `ai_grafana_metrics_container_name` | `opencode-grafana` | Podman container name |
 | `ai_grafana_metrics_script_name` | `opencode-grafana` | Helper script name in `~/bin/` |
-| `ai_grafana_metrics_data_dir` | `~/.local/share/opencode-metrics` | Metrics database directory (bind-mounted into container) |
 | `ai_grafana_metrics_provisioning_dir` | `~/.config/opencode/grafana` | Grafana provisioning and dashboard files directory |
 | `ai_grafana_metrics_monthly_budget` | `300` | Monthly cost budget (USD). Drives color thresholds on all cost KPI panels |
 
@@ -248,19 +250,51 @@ ai_opencode_agent_general_model: "google-vertex-anthropic/claude-sonnet-4-6@defa
 
 This routes build to Opus, plan/general to Sonnet, and explore to Haiku.
 
-**Plugins (opt-in):**
+**Plugins (metrics included by default):**
 
-OpenCode supports plugins that further reduce token usage. The role deploys any plugins
-listed in `ai_opencode_plugins` but does not enable any by default. Users opt in:
+The [`@mburghardt/opencode-metrics`](https://github.com/marcusburghardt/opencode-metrics)
+plugin is included by default, giving every user automatic metrics collection out of the
+box. The version is pinned via `ai_opencode_metrics_version` (default: `0.2.0`).
+
+To add more plugins alongside the default:
 
 ```yaml
 ai_opencode_plugins:
+  - "@mburghardt/opencode-metrics@{{ ai_opencode_metrics_version }}"
   - "@angdrew/opencode-hashline-plugin"   # content-addressable edits
   - "@tarquinen/opencode-dcp"             # dynamic context pruning
 ```
 
+To remove the metrics plugin and start with an empty list:
+
+```yaml
+ai_opencode_plugins: []
+```
+
 OpenCode installs npm plugins automatically at startup. Plugin-specific configuration
 files (e.g., `dcp.jsonc`) are managed by the user outside this role.
+
+**Metrics plugin configuration (optional):**
+
+By default, the metrics plugin creates its own `config.yaml` with sensible defaults at
+first run. To customize classification or budget rules, set `ai_opencode_metrics_config`
+in your playbook:
+
+```yaml
+ai_opencode_metrics_config:
+  version: 1
+  classification_rules:
+    - name: debugging
+      conditions:
+        - field: session_title
+          operator: contains
+          value: debug
+  budget_rules:
+    - period: monthly
+      limit_usd: 300
+```
+
+When non-empty, the role deploys the config to `{{ ai_opencode_metrics_data_dir }}/config.yaml`.
 
 **Compaction tuning:**
 

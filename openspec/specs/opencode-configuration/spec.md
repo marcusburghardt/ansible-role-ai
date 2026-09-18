@@ -31,13 +31,9 @@ The role SHALL deploy the OpenCode configuration file to `ai_opencode_config_fil
 - **WHEN** the consumer sets `ai_opencode_agent_plan_model` to `google-vertex-anthropic/claude-sonnet-4-6@default` and `ai_opencode_agent_explore_model` to `google-vertex-anthropic/claude-haiku-4-5@20251001`
 - **THEN** the deployed `opencode.json` SHALL contain an `"agent"` block where `plan.model` is `google-vertex-anthropic/claude-sonnet-4-6@default` and `explore.model` is `google-vertex-anthropic/claude-haiku-4-5@20251001`, while `build` and `general` retain their defaults
 
-#### Scenario: Plugin list is rendered from variable
-- **WHEN** the role deploys with default `ai_opencode_plugins` value (empty list)
-- **THEN** the deployed `opencode.json` SHALL contain `"plugin": []`
-
-#### Scenario: Plugin list reflects user additions
-- **WHEN** the consumer sets `ai_opencode_plugins` to `["@angdrew/opencode-hashline-plugin", "@tarquinen/opencode-dcp"]`
-- **THEN** the deployed `opencode.json` SHALL contain `"plugin": ["@angdrew/opencode-hashline-plugin", "@tarquinen/opencode-dcp"]`
+#### Scenario: Plugin list renders metrics plugin by default
+- **WHEN** the role deploys with default `ai_opencode_plugins` value
+- **THEN** the deployed `opencode.json` SHALL contain `"plugin": ["@mburghardt/opencode-metrics@0.2.0"]`
 
 #### Scenario: Compaction settings are rendered from variable
 - **WHEN** the role deploys with default `ai_opencode_compaction` value
@@ -61,15 +57,28 @@ The role SHALL provide individual default variables for each OpenCode built-in a
 - **THEN** only the `plan` agent's model SHALL change; `build`, `explore`, and `general` SHALL retain their defaults
 
 ### Requirement: Plugin deployment list
-The role SHALL provide an `ai_opencode_plugins` list variable (default: empty list `[]`) that is rendered directly as the `"plugin"` array in the deployed `opencode.json`. The role SHALL NOT default any plugins to enabled. Users opt in to plugins by adding package names to the list in their playbook.
+The role SHALL provide an `ai_opencode_plugins` list variable that is rendered
+directly as the `"plugin"` array in the deployed `opencode.json`. The default
+value SHALL include `@mburghardt/opencode-metrics` at the version specified by
+`ai_opencode_metrics_version` (e.g.,
+`"@mburghardt/opencode-metrics@0.2.0"`). Users MAY override this list to add,
+remove, or replace plugins in their playbook.
 
-#### Scenario: No plugins by default
+#### Scenario: Default plugins include metrics
 - **WHEN** the consumer does not override `ai_opencode_plugins`
+- **THEN** the deployed `opencode.json` SHALL contain `"plugin": ["@mburghardt/opencode-metrics@0.2.0"]` (version from `ai_opencode_metrics_version`)
+
+#### Scenario: User removes the default plugin
+- **WHEN** the consumer sets `ai_opencode_plugins` to `[]`
 - **THEN** the deployed `opencode.json` SHALL contain `"plugin": []`
 
-#### Scenario: User adds plugins
+#### Scenario: User adds plugins alongside the default
+- **WHEN** the consumer sets `ai_opencode_plugins` to `["@mburghardt/opencode-metrics@{{ ai_opencode_metrics_version }}", "@angdrew/opencode-hashline-plugin"]`
+- **THEN** the deployed `opencode.json` SHALL contain both plugins in the `"plugin"` array
+
+#### Scenario: Plugin list reflects user additions
 - **WHEN** the consumer sets `ai_opencode_plugins` to `["@angdrew/opencode-hashline-plugin"]`
-- **THEN** the deployed `opencode.json` SHALL contain `"plugin": ["@angdrew/opencode-hashline-plugin"]`
+- **THEN** the deployed `opencode.json` SHALL contain `"plugin": ["@angdrew/opencode-hashline-plugin"]` (metrics plugin is not present because the user replaced the entire list)
 
 ### Requirement: Data-driven compaction settings
 The role SHALL provide an `ai_opencode_compaction` dict variable (default: `{auto: true, prune: true, reserved: 10000}`) that is rendered directly as the `"compaction"` block in the deployed `opencode.json`. This replaces the previously hardcoded compaction block in the template.

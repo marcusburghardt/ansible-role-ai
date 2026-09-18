@@ -109,3 +109,17 @@
   loop_control:
     label: "{{ item.name | default(item.src | basename) }}"
   when: ai_opencode_skills_custom | length > 0
+
+- name: "{{ role_name }} | {{ task.name }} | Ensure metrics plugin data directory"
+  ansible.builtin.file:
+    path: "{{ ai_opencode_metrics_data_dir }}"
+    state: directory
+    mode: "0755"
+  when: ai_opencode_metrics_config | length > 0
+
+- name: "{{ role_name }} | {{ task.name }} | Deploy metrics plugin configuration"
+  ansible.builtin.template:
+    src: opencode_metrics_config.yaml.j2
+    dest: "{{ ai_opencode_metrics_data_dir }}/config.yaml"
+    mode: "0644"
+  when: ai_opencode_metrics_config | length > 0

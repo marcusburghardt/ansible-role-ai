@@ -127,11 +127,22 @@ ai_opencode_providers:
 # are disabled. Override to block specific providers (e.g., ["openai", "gemini"]).
 ai_opencode_disabled_providers: []
 
+# OpenCode metrics plugin
+# Pinned version of @mburghardt/opencode-metrics. Updated manually when
+# the plugin releases a new version.
+ai_opencode_metrics_version: "0.2.0"
+
+# Optional metrics plugin configuration. When non-empty, the role deploys
+# config.yaml to ai_opencode_metrics_data_dir. When empty (default), the
+# plugin creates its own defaults at first run.
+ai_opencode_metrics_config: {}
+
 # OpenCode plugins
-# Opt-in list of npm plugin packages for OpenCode. Empty by default.
+# List of npm plugin packages for OpenCode. The metrics plugin is included by
+# default. Override to add, remove, or replace plugins.
 # OpenCode installs plugins automatically at startup via Bun.
-# Example: ["@angdrew/opencode-hashline-plugin", "@tarquinen/opencode-dcp"]
-ai_opencode_plugins: []
+ai_opencode_plugins:
+  - "@mburghardt/opencode-metrics@{{ ai_opencode_metrics_version }}"
 
 # OpenCode configuration
 ai_opencode_config_dir: "{{ ai_user_home_dir }}/.config/opencode"
@@ -212,7 +223,7 @@ ai_cursor_appimage_dir: "{{ ai_user_home_dir }}/.local/bin"
 ai_grafana_metrics_port: 3033
 ai_grafana_metrics_container_name: "opencode-grafana"
 ai_grafana_metrics_script_name: "opencode-grafana"
-ai_grafana_metrics_data_dir: "{{ ai_user_home_dir }}/.local/share/opencode-metrics"
+ai_opencode_metrics_data_dir: "{{ ai_user_home_dir }}/.local/share/opencode-metrics"
 ai_grafana_metrics_provisioning_dir: "{{ ai_opencode_config_dir }}/grafana"
 # Monthly cost budget in USD. Drives color thresholds across all cost KPI
 # panels (daily, weekly, monthly, yearly). Change this single value and
