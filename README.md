@@ -60,7 +60,7 @@ Take a look in the Example Playbook section.
 | `ai_opencode_agent_explore_model` | `{{ ai_small_model }}` | Model for explore agent |
 | `ai_opencode_agent_general_model` | `{{ ai_small_model }}` | Model for general agent |
 | `ai_opencode_agents` | See defaults | Full agent routing dict (rendered into `opencode.json`) |
-| `ai_opencode_metrics_version` | `0.2.0` | Pinned version of the `@mburghardt/opencode-metrics` plugin (set to `"local"` for local dev) |
+| `ai_opencode_metrics_version` | `0.3.0` | Pinned version of the `@mburghardt/opencode-metrics` plugin (set to `"local"` for local dev) |
 | `ai_opencode_metrics_local_path` | `""` | Path to local opencode-metrics repo (only used when version is `"local"`) |
 | `ai_opencode_metrics_config` | `{}` | Optional metrics plugin config dict (deployed as `config.yaml` when non-empty) |
 | `ai_opencode_metrics_data_dir` | `~/.local/share/opencode-metrics` | Metrics plugin data directory (bind-mounted into Grafana container) |
@@ -255,7 +255,7 @@ This routes build to Opus, plan/general to Sonnet, and explore to Haiku.
 
 The [`@mburghardt/opencode-metrics`](https://github.com/marcusburghardt/opencode-metrics)
 plugin is included by default, giving every user automatic metrics collection out of the
-box. The version is pinned via `ai_opencode_metrics_version` (default: `0.2.0`).
+box. The version is pinned via `ai_opencode_metrics_version` (default: `0.3.0`).
 
 To add more plugins alongside the default:
 

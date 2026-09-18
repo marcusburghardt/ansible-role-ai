@@ -33,7 +33,7 @@ The role SHALL deploy the OpenCode configuration file to `ai_opencode_config_fil
 
 #### Scenario: Plugin list renders metrics plugin by default
 - **WHEN** the role deploys with default `ai_opencode_plugins` value
-- **THEN** the deployed `opencode.json` SHALL contain `"plugin": ["@mburghardt/opencode-metrics@0.2.0"]`
+- **THEN** the deployed `opencode.json` SHALL contain `"plugin": ["@mburghardt/opencode-metrics@0.3.0"]`
 
 #### Scenario: Compaction settings are rendered from variable
 - **WHEN** the role deploys with default `ai_opencode_compaction` value
@@ -66,8 +66,8 @@ include any `@mburghardt/opencode-metrics` npm entry. Users MAY override this li
 entirely to add, remove, or replace plugins in their playbook.
 
 #### Scenario: Default plugins include metrics in npm mode
-- **WHEN** the consumer does not override `ai_opencode_plugins` and `ai_opencode_metrics_version` is `"0.2.0"`
-- **THEN** the deployed `opencode.json` SHALL contain `"plugin": ["@mburghardt/opencode-metrics@0.2.0"]`
+- **WHEN** the consumer does not override `ai_opencode_plugins` and `ai_opencode_metrics_version` is `"0.3.0"`
+- **THEN** the deployed `opencode.json` SHALL contain `"plugin": ["@mburghardt/opencode-metrics@0.3.0"]`
 
 #### Scenario: Default plugins exclude metrics npm entry in local mode
 - **WHEN** the consumer does not override `ai_opencode_plugins` and `ai_opencode_metrics_version` is `"local"`

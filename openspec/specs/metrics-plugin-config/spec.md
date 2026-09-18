@@ -51,9 +51,9 @@ replaces the previous `ai_grafana_metrics_data_dir` variable.
 - **THEN** the Grafana helper script SHALL use `ai_opencode_metrics_data_dir` for the container bind-mount path
 
 ### Requirement: Metrics plugin version variable
-The role SHALL provide an `ai_opencode_metrics_version` variable (default: `"0.2.0"`)
+The role SHALL provide an `ai_opencode_metrics_version` variable (default: `"0.3.0"`)
 that controls how the opencode-metrics plugin is installed. Accepted values are:
-- A semver version string (e.g., `"0.2.0"`) -- installs the pinned version from npm.
+- A semver version string (e.g., `"0.3.0"`) -- installs the pinned version from npm.
 - `"latest"` -- always installs the newest npm release.
 - `"local"` -- loads the plugin from a local repository path specified by
   `ai_opencode_metrics_local_path` instead of npm.
@@ -65,7 +65,7 @@ specifier. When the value is `"local"`, the npm specifier SHALL NOT appear in
 
 #### Scenario: Default version is pinned
 - **WHEN** the consumer does not override `ai_opencode_metrics_version`
-- **THEN** the default `ai_opencode_plugins` list SHALL contain `@mburghardt/opencode-metrics@0.2.0`
+- **THEN** the default `ai_opencode_plugins` list SHALL contain `@mburghardt/opencode-metrics@0.3.0`
 
 #### Scenario: User overrides version
 - **WHEN** the consumer sets `ai_opencode_metrics_version` to `"1.0.0"`

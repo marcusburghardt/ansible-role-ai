@@ -131,7 +131,7 @@ ai_opencode_disabled_providers: []
 # Pinned version of @mburghardt/opencode-metrics. Updated manually when
 # the plugin releases a new version. Set to "local" to load the plugin
 # from a local repository path (see ai_opencode_metrics_local_path).
-ai_opencode_metrics_version: "0.2.0"
+ai_opencode_metrics_version: "0.3.0"
 
 # Path to a local opencode-metrics repository on the target host.
 # Only used when ai_opencode_metrics_version is "local". A leading tilde

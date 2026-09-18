@@ -71,8 +71,8 @@ any action on the loader file or `opencode.json`, following the same pattern use
 by `install_ollama` and `install_cursor`.
 
 #### Scenario: NPM mode is reported
-- **WHEN** `ai_opencode_metrics_version` is `"0.2.0"` and the playbook runs
-- **THEN** the role SHALL emit a debug message showing `mode=npm`, `version=0.2.0`, `source=@mburghardt/opencode-metrics@0.2.0`, and the config deployment status
+- **WHEN** `ai_opencode_metrics_version` is `"0.3.0"` and the playbook runs
+- **THEN** the role SHALL emit a debug message showing `mode=npm`, `version=0.3.0`, `source=@mburghardt/opencode-metrics@0.3.0`, and the config deployment status
 
 #### Scenario: Local mode is reported
 - **WHEN** `ai_opencode_metrics_version` is `"local"` and `ai_opencode_metrics_local_path` is `"~/GIT/me/opencode-metrics"` and the playbook runs
