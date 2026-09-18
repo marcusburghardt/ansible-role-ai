@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.3.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.2.0...v0.3.0) (2026-09-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* ai_grafana_metrics_data_dir renamed to ai_opencode_metrics_data_dir. Playbooks referencing the old variable name must be updated.
+
+### Features
+
+* add local install mode for opencode-metrics plugin ([5ad71a6](https://github.com/marcusburghardt/ansible-role-ai/commit/5ad71a6df261f3ecd50c156a0608698049585fb7))
+* add openspec change for default metrics plugin ([9ab606f](https://github.com/marcusburghardt/ansible-role-ai/commit/9ab606fa0ba1b27d694474984cbfcfe44ac67893))
+* restructure dashboard with sub-agent analytics and question-based rows ([6f3f4c2](https://github.com/marcusburghardt/ansible-role-ai/commit/6f3f4c239ba7980881ab453b7a4c77a27a72985a))
+* restructure dashboard with sub-agent analytics and question-based rows ([3144b28](https://github.com/marcusburghardt/ansible-role-ai/commit/3144b281613d3d24cc7273fdb844041873011137))
+* ship opencode-metrics plugin as default with optional config ([366f353](https://github.com/marcusburghardt/ansible-role-ai/commit/366f353c9bf9fab73df14b9fe23eddf40112b34f))
+
+
+### Miscellaneous
+
+* archive default-metrics-plugin change and sync specs ([fd3b272](https://github.com/marcusburghardt/ansible-role-ai/commit/fd3b27209a4402f1e7d06bd9cf89f9b3d6a8052f))
+* bump opencode-metrics default version to 0.3.0 ([e91f6f7](https://github.com/marcusburghardt/ansible-role-ai/commit/e91f6f74bb9b0921f5207777738d9c3540af2e7a))
+* **main:** release 0.2.0 ([dc98b4d](https://github.com/marcusburghardt/ansible-role-ai/commit/dc98b4d8747c41ceb691cabd4280fbe881b8d7e8))
+
+
+### Documentation
+
+* add openspec proposal for metrics local install mode ([03d69a6](https://github.com/marcusburghardt/ansible-role-ai/commit/03d69a611f1db5cf891ea0f02b49158d91f4b462))
+* archive metrics-local-install-mode and sync specs ([76abc0b](https://github.com/marcusburghardt/ansible-role-ai/commit/76abc0bc25f58854bb5d9850dc2ee4af2fb68c33))
+
 ## [0.2.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.1.1...v0.2.0) (2026-09-16)
 
 
