@@ -114,7 +114,7 @@
           "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
           "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "fixed", "fixedColor": "#73BF69" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
           "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
-          "targets": [{ "rawQueryText": "SELECT p.name as project, SUM(m.value) as cost FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id JOIN projects p ON s.project_id = p.project_id WHERE m.metric_name = 'cost' AND p.name != '' GROUP BY p.name ORDER BY cost DESC LIMIT 10", "queryType": "table", "refId": "A" }]
+          "targets": [{ "rawQueryText": "SELECT p.name as project, SUM(m.value) as cost FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id JOIN projects p ON s.project_id = p.project_id WHERE m.metric_name = 'cost' AND p.name != '' AND p.name != 'unknown' GROUP BY p.name ORDER BY cost DESC LIMIT 10", "queryType": "table", "refId": "A" }]
         },
         {
           "id": 6, "title": "Active Projects", "type": "stat", "transparent": true,
@@ -376,7 +376,7 @@
           "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
           "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#36A2EB" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
           "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
-          "targets": [{ "rawQueryText": "SELECT p.name as project, SUM(m.value) as files_changed FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id JOIN projects p ON s.project_id = p.project_id WHERE m.metric_name = 'files_changed' AND p.name != '' GROUP BY p.name ORDER BY files_changed DESC LIMIT 10", "queryType": "table", "refId": "A" }]
+          "targets": [{ "rawQueryText": "SELECT p.name as project, SUM(m.value) as files_changed FROM v_measurements m JOIN sessions s ON m.session_id = s.session_id JOIN projects p ON s.project_id = p.project_id WHERE m.metric_name = 'files_changed' AND p.name != '' AND p.name != 'unknown' GROUP BY p.name ORDER BY files_changed DESC LIMIT 10", "queryType": "table", "refId": "A" }]
         },
         {
           "id": 80, "title": "PRs Created", "type": "stat", "transparent": true,
