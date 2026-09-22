@@ -10,9 +10,12 @@ ai_opencode_skills_deploy_dir: >-
      else ai_opencode_skills_dir }}
 
 # Expanded absolute path for the local opencode-metrics repository.
-# Replaces a leading ~ with ai_user_home_dir. Empty when the user has
-# not set ai_opencode_metrics_local_path.
+# Replaces a leading ~ with ai_user_home_dir and strips any trailing
+# slash to avoid double-slash in generated import paths. Empty when
+# the user has not set ai_opencode_metrics_local_path.
 _ai_metrics_local_path_expanded: >-
-  {{ ai_opencode_metrics_local_path | regex_replace('^~', ai_user_home_dir)
+  {{ ai_opencode_metrics_local_path
+     | regex_replace('^~', ai_user_home_dir)
+     | regex_replace('/$', '')
      if ai_opencode_metrics_local_path | length > 0
      else '' }}

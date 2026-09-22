@@ -119,6 +119,22 @@
     - ai_opencode_metrics_version == 'local'
     - ai_opencode_metrics_local_path | length == 0
 
+- name: "{{ role_name }} | {{ task.name }} | Verify local metrics plugin build artifact"
+  ansible.builtin.stat:
+    path: "{{ _ai_metrics_local_path_expanded }}/dist/index.js"
+  register: _ai_metrics_dist
+  when: ai_opencode_metrics_version == 'local'
+
+- name: "{{ role_name }} | {{ task.name }} | Fail if local metrics build artifact is missing"
+  ansible.builtin.fail:
+    msg: >-
+      dist/index.js not found at {{ _ai_metrics_local_path_expanded }}/dist/index.js.
+      Run 'make build' in {{ _ai_metrics_local_path_expanded }} before running
+      this playbook.
+  when:
+    - ai_opencode_metrics_version == 'local'
+    - not _ai_metrics_dist.stat.exists
+
 - name: "{{ role_name }} | {{ task.name }} | Report metrics plugin state"
   ansible.builtin.debug:
     msg: >-

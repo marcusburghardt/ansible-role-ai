@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Managed by ansible-role-ai — do not edit manually.
 // This file is regenerated on each playbook run in local mode.
-import "{{ _ai_metrics_local_path_expanded }}/dist/index.js";
+import plugin from "{{ _ai_metrics_local_path_expanded }}/dist/index.js";
+
+export const OpenCodeMetrics = plugin;
