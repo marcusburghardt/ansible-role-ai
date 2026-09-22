@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.1](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.3.0...v0.3.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* enable release-please auto-tagging and inline Galaxy publish ([9581570](https://github.com/marcusburghardt/ansible-role-ai/commit/95815702651865620fd8a5296c49c4188ed2d08e))
+* filter 'unknown' project names from dashboard panels ([1c2dbd8](https://github.com/marcusburghardt/ansible-role-ai/commit/1c2dbd889076ef8eee88da26c627a58f33c2af3f))
+* metrics plugin loader missing named export ([66b5bd8](https://github.com/marcusburghardt/ansible-role-ai/commit/66b5bd8c7bf08649f64b1c8d71f218d53fb54ede))
+
+
+### Miscellaneous
+
+* **main:** release 0.3.0 ([c801a32](https://github.com/marcusburghardt/ansible-role-ai/commit/c801a32f132676871e3db9de9ccdfe19f586ae9b))
+
 ## [0.3.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.2.0...v0.3.0) (2026-09-18)
 
 
