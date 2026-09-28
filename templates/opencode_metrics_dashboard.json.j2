@@ -36,7 +36,7 @@
       "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
       "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }, { "color": "#FADE2A", "value": {{ weekly_warn }} }, { "color": "#F2495C", "value": {{ weekly_crit }} }] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
-      "targets": [{ "rawQueryText": "SELECT ROUND(COALESCE(SUM(value), 0), 2) as \"Active This Week\" FROM v_measurements WHERE metric_name = 'cost' AND recorded_at_epoch >= CAST(strftime('%s', date('now', 'weekday 1', '-7 days')) AS INTEGER)", "queryType": "table", "refId": "A" }]
+      "targets": [{ "rawQueryText": "SELECT ROUND(COALESCE(SUM(value), 0), 2) as \"Active This Week\" FROM v_measurements WHERE metric_name = 'cost' AND recorded_at_epoch >= CAST(strftime('%s', date('now', '-' || CAST((CAST(strftime('%w','now') AS INTEGER) + 6) % 7 AS TEXT) || ' days')) AS INTEGER)", "queryType": "table", "refId": "A" }]
     },
     {
       "id": 9, "title": "Active This Month", "type": "stat", "transparent": true,
