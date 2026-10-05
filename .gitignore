@@ -22,3 +22,6 @@
 
 # Agent-specific files (local only)
 CLAUDE.md
+
+# Local Ansible role symlinks (development convenience)
+.ansible/roles/
