@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.2](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.3.1...v0.3.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* correct weekly cost query off-by-one on Mondays ([7b8a19f](https://github.com/marcusburghardt/ansible-role-ai/commit/7b8a19f085247b3df03a3a4fd7dad7aa0b0d6a7f))
+* normalize unknown project name in Top Sessions panel ([df65d43](https://github.com/marcusburghardt/ansible-role-ai/commit/df65d4335f36a8d24c743ca152f4feda94b7553c))
+* remove tracked symlink from .ansible/roles/ ([6fc8f50](https://github.com/marcusburghardt/ansible-role-ai/commit/6fc8f504e362b7f7d2f96c46c0bee67d7672532a))
+
 ## [0.3.1](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.3.0...v0.3.1) (2026-09-22)
 
 
