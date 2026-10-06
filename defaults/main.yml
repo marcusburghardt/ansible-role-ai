@@ -161,6 +161,14 @@ ai_opencode_config_file: "{{ ai_opencode_config_dir }}/opencode.json"
 ai_opencode_options:
   thinking: false
 
+# OpenCode permission overrides
+# Dict of permission rules merged on top of _ai_opencode_permissions_default
+# using combine(recursive=True). Keys match the OpenCode permission schema
+# (bash, read, edit, external_directory). Only specify rules you want to
+# add or override; defaults are preserved for all unmentioned keys.
+# Example: { bash: { "poetry *": "allow" }, read: { "*vault*": "deny" } }
+ai_opencode_permissions: {}
+
 # OpenCode compaction settings
 # Controls automatic context compaction behavior. Rendered directly into the
 # "compaction" block of opencode.json. Override to tune reserved tokens,

@@ -19,3 +19,146 @@ _ai_metrics_local_path_expanded: >-
      | regex_replace('/$', '')
      if ai_opencode_metrics_local_path | length > 0
      else '' }}
+
+# Default permission rules for OpenCode.
+# Three-tier structure: allow > ask > deny (last matching rule wins).
+# Users overlay custom rules via ai_opencode_permissions in their playbook;
+# the role merges both dicts with combine(recursive=True).
+_ai_opencode_permissions_default:
+  bash:
+    # --- catch-all default ---
+    "*": "ask"
+    # --- ALLOW: read-only inspection and dev tools ---
+    ".specify/scripts/bash/*": "allow"
+    "cat *": "allow"
+    "cd *": "allow"
+    "diff *": "allow"
+    "echo *": "allow"
+    "file *": "allow"
+    "find *": "allow"
+    "gh *": "allow"
+    "git -C *": "allow"
+    "git add *": "allow"
+    "git blame *": "allow"
+    "git branch*": "allow"
+    "git checkout*": "allow"
+    "git config *": "allow"
+    "git diff *": "allow"
+    "git fetch *": "allow"
+    "git log *": "allow"
+    "git ls-files *": "allow"
+    "git ls-remote *": "allow"
+    "git ls-tree *": "allow"
+    "git merge-base *": "allow"
+    "git mv *": "allow"
+    "git pull *": "allow"
+    "git remote *": "allow"
+    "git rev-parse *": "allow"
+    "git show *": "allow"
+    "git show-ref *": "allow"
+    "git stash *": "allow"
+    "git status *": "allow"
+    "git symbolic-ref *": "allow"
+    "grep *": "allow"
+    "head *": "allow"
+    "jq *": "allow"
+    "less *": "allow"
+    "ls *": "allow"
+    "openspec *": "allow"
+    "rg *": "allow"
+    "sort *": "allow"
+    "tail *": "allow"
+    "test *": "allow"
+    "tree *": "allow"
+    "wc *": "allow"
+    "which *": "allow"
+    "yamllint *": "allow"
+    # --- ASK: git write operations ---
+    "git commit *": "ask"
+    "git merge *": "ask"
+    "git push *": "ask"
+    "git rebase *": "ask"
+    "git reset *": "ask"
+    "git tag *": "ask"
+    # --- ASK: GitHub write operations ---
+    "gh api --method DELETE *": "ask"
+    "gh api --method PATCH *": "ask"
+    "gh api --method POST *": "ask"
+    "gh api --method PUT *": "ask"
+    "gh api -X DELETE *": "ask"
+    "gh api -X PATCH *": "ask"
+    "gh api -X POST *": "ask"
+    "gh api -X PUT *": "ask"
+    "gh api graphql *": "ask"
+    "gh issue close *": "ask"
+    "gh issue comment *": "ask"
+    "gh issue create *": "ask"
+    "gh issue edit *": "ask"
+    "gh pr close *": "ask"
+    "gh pr comment *": "ask"
+    "gh pr create *": "ask"
+    "gh pr edit *": "ask"
+    "gh pr merge *": "ask"
+    "gh pr review *": "ask"
+    "gh release create *": "ask"
+    # --- ASK: file deletion ---
+    "rm *": "ask"
+    # --- DENY: system administration ---
+    "at *": "deny"
+    "chown *": "deny"
+    "crontab *": "deny"
+    "dd *": "deny"
+    "dnf *": "deny"
+    "fdisk *": "deny"
+    "firewall-cmd *": "deny"
+    "iptables *": "deny"
+    "kill *": "deny"
+    "killall *": "deny"
+    "mkfs *": "deny"
+    "mount *": "deny"
+    "nft *": "deny"
+    "pkill *": "deny"
+    "reboot": "deny"
+    "shutdown *": "deny"
+    "su *": "deny"
+    "sudo *": "deny"
+    "systemctl *": "deny"
+    "umount *": "deny"
+  read:
+    # --- default ---
+    "*": "allow"
+    # --- DENY: secrets and credentials ---
+    "*.cer": "deny"
+    "*.crt": "deny"
+    "*.env": "deny"
+    "*.env.*": "deny"
+    "*.jks": "deny"
+    "*.kdbx": "deny"
+    "*.key": "deny"
+    "*.keystore": "deny"
+    "*.p12": "deny"
+    "*.p8": "deny"
+    "*.pem": "deny"
+    "*.pfx": "deny"
+    "*.priv*": "deny"
+    "*.secret*": "deny"
+    "*id_ecdsa*": "deny"
+    "*id_ed25519*": "deny"
+    "*id_rsa*": "deny"
+  edit: "allow"
+  external_directory:
+    # --- ALLOW ---
+    "/tmp/**": "allow"
+    # --- DENY: system paths ---
+    "/boot/**": "deny"
+    "/etc/**": "deny"
+    "/proc/**": "deny"
+    "/sys/**": "deny"
+    "/usr/**": "deny"
+    "/var/**": "deny"
+
+# Merged permission rules: defaults overlaid with user overrides.
+# Used by opencode.json.j2 to render the permission block.
+_ai_opencode_permissions_merged: >-
+  {{ _ai_opencode_permissions_default
+     | combine(ai_opencode_permissions, recursive=True) }}
