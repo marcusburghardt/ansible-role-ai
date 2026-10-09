@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.3.2...v0.4.0) (2026-10-09)
+
+
+### Features
+
+* make permission block variable-driven with configurable overrides ([86dd17d](https://github.com/marcusburghardt/ansible-role-ai/commit/86dd17d483367a21e8d75d9c50b6ab3810d47057))
+
+
+### Miscellaneous
+
+* allow known lint commands by default ([c2ad84f](https://github.com/marcusburghardt/ansible-role-ai/commit/c2ad84f71ea0b53c9f2627c27fb697c60d9c7a37))
+* include date command often used by agents ([501f198](https://github.com/marcusburghardt/ansible-role-ai/commit/501f198d450a7a1416872c5dad70536a057329d3))
+
 ## [0.3.2](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.3.1...v0.3.2) (2026-10-05)
 
 
