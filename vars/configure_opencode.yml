@@ -33,6 +33,7 @@ _ai_opencode_permissions_default:
     "ansible-lint *": "allow"
     "cat *": "allow"
     "cd *": "allow"
+    "date *": "allow"
     "diff *": "allow"
     "echo *": "allow"
     "file *": "allow"
