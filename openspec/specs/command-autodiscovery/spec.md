@@ -5,7 +5,7 @@ Discover and deploy built-in and user-supplied OpenCode commands with configurab
 ## Requirements
 
 ### Requirement: Auto-discover built-in commands from role files directory
-The role SHALL auto-discover all `.md` files in the role's `files/commands/` directory using `ansible.builtin.find` and register the results for deployment. The discovery SHALL occur at runtime so that adding or removing files from `files/commands/` requires no changes to task YAML.
+The role SHALL auto-discover all `.md` files in the role's `files/commands/` directory using `ansible.builtin.find` and register the results for deployment. The discovery SHALL occur at runtime so that adding or removing files from `files/commands/` requires no changes to task YAML. Commands SHALL be deployed to `ai_opencode_command_dir` which SHALL default to `~/.config/opencode/commands` (V2 plural convention, not the V1 singular `command`).
 
 #### Scenario: All built-in commands are discovered
 - **WHEN** the `files/commands/` directory contains `checkout_pr.md`, `review_pr.md`, and `refresh_spec_frameworks.md`
@@ -18,6 +18,10 @@ The role SHALL auto-discover all `.md` files in the role's `files/commands/` dir
 #### Scenario: Command is removed from the role
 - **WHEN** a file is removed from `files/commands/`
 - **THEN** the file SHALL no longer be discovered or deployed on subsequent runs (existing deployed copies are not removed unless explicit cleanup is used)
+
+#### Scenario: Deploy directory uses V2 plural convention
+- **WHEN** the role deploys commands with default `ai_opencode_command_dir`
+- **THEN** commands SHALL be deployed to `~/.config/opencode/commands/` (not `~/.config/opencode/command/`)
 
 ### Requirement: Filter built-in commands against a blocklist
 The role SHALL provide a variable `ai_opencode_commands_disabled` (default: empty list) that accepts command names without the `.md` extension. Any discovered built-in command whose basename (minus `.md`) matches an entry in this list SHALL be skipped during deployment.
