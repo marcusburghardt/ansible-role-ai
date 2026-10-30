@@ -18,6 +18,33 @@
 * Use compaction `keep.tokens` and `buffer`, deploy commands to `commands/`, and remove `CLAUDE.md` from default instructions.
 * Disable the metrics plugin by default pending its V2 API migration; retain local development infrastructure and metrics data.
 
+## [0.4.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.3.2...v0.4.0) (2026-10-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* **opencode:** The configuration format, permission overrides, and provider variables follow the OpenCode V2 schema. ai_small_model, ai_opencode_options, and ai_opencode_disabled_providers are removed.
+
+### Features
+
+* make permission block variable-driven with configurable overrides ([86dd17d](https://github.com/marcusburghardt/ansible-role-ai/commit/86dd17d483367a21e8d75d9c50b6ab3810d47057))
+* **opencode:** add vertex credentials file support ([4ecc631](https://github.com/marcusburghardt/ansible-role-ai/commit/4ecc631d9a19c10cc536aabc2b000bc3751f057f))
+* **opencode:** migrate role to OpenCode V2 ([1eb2c20](https://github.com/marcusburghardt/ansible-role-ai/commit/1eb2c2032a572edefc850cb1d2d689a9e5cb2f33))
+
+
+### Miscellaneous
+
+* allow known lint commands by default ([c2ad84f](https://github.com/marcusburghardt/ansible-role-ai/commit/c2ad84f71ea0b53c9f2627c27fb697c60d9c7a37))
+* **deps:** Bump actions/setup-python from 7.0.0 to 7.1.0 ([da92200](https://github.com/marcusburghardt/ansible-role-ai/commit/da92200db5c20d25a959d8d7aa7f91e9e19f6922))
+* **deps:** Bump actions/setup-python from 7.0.0 to 7.1.0 ([b2d3729](https://github.com/marcusburghardt/ansible-role-ai/commit/b2d3729b38ea24443a8369e6bee742af6916b67b))
+* include date command often used by agents ([501f198](https://github.com/marcusburghardt/ansible-role-ai/commit/501f198d450a7a1416872c5dad70536a057329d3))
+* **openspec:** archive completed opencode changes ([3c9511f](https://github.com/marcusburghardt/ansible-role-ai/commit/3c9511f8b568f1f88d5148a926f1126926679e9f))
+
+
+### Documentation
+
+* **openspec:** propose OpenCode V2 migration ([f006192](https://github.com/marcusburghardt/ansible-role-ai/commit/f0061922f849e44604676b93f78b76085faeb1a4))
+
 ## [0.3.2](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.3.1...v0.3.2) (2026-10-05)
 
 
