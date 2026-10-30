@@ -1,3 +1,25 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 # handlers file for ansible-role-ai
+
+- name: "Restart opencode service | Check whether a shared service is running"
+  ansible.builtin.command:
+    argv: [opencode, service, status]
+  register: _ai_opencode_service_status
+  changed_when: false
+  failed_when: false
+  listen: restart opencode service
+  when: ai_opencode_restart_service | bool
+
+# Restarting keeps stored sessions but interrupts in-flight requests.
+# The service inherits ai_opencode_server_env because it is started by the
+# role, not by the launcher, which is why both paths share that dict.
+- name: "Restart opencode service | Restart the running shared service"
+  ansible.builtin.command:
+    argv: [opencode, service, restart]
+  environment: "{{ ai_opencode_server_env }}"
+  changed_when: true
+  listen: restart opencode service
+  when:
+    - ai_opencode_restart_service | bool
+    - _ai_opencode_service_status.rc | default(1) == 0

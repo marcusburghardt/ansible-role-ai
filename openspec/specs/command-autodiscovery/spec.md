@@ -1,3 +1,9 @@
+## Purpose
+
+Discover and deploy built-in and user-supplied OpenCode commands with configurable exclusions.
+
+## Requirements
+
 ### Requirement: Auto-discover built-in commands from role files directory
 The role SHALL auto-discover all `.md` files in the role's `files/commands/` directory using `ansible.builtin.find` and register the results for deployment. The discovery SHALL occur at runtime so that adding or removing files from `files/commands/` requires no changes to task YAML.
 

@@ -1,4 +1,8 @@
-## MODIFIED Requirements
+## Purpose
+
+Deploy customizable OpenCode configuration, agent routing, plugins, and compaction settings.
+
+## Requirements
 
 ### Requirement: Deploy OpenCode configuration file from template
 The role SHALL deploy the OpenCode configuration file to `ai_opencode_config_file` (default: `~/.config/opencode/opencode.json`) using a Jinja2 template. The template SHALL incorporate variables for model, small_model, agent routing (`ai_opencode_agents`), plugin list (`ai_opencode_plugins`), provider settings, disabled providers, permissions, compaction settings (`ai_opencode_compaction`), and a variable-driven instructions file list (`ai_opencode_instructions`).
@@ -42,8 +46,6 @@ The role SHALL deploy the OpenCode configuration file to `ai_opencode_config_fil
 #### Scenario: Compaction settings reflect user overrides
 - **WHEN** the consumer overrides `ai_opencode_compaction` to `{"auto": true, "prune": false, "reserved": 5000}`
 - **THEN** the deployed `opencode.json` SHALL contain the overridden compaction values
-
-## ADDED Requirements
 
 ### Requirement: Per-agent model variables for independent routing control
 The role SHALL provide individual default variables for each OpenCode built-in agent's model assignment: `ai_opencode_agent_build_model` (default: `{{ ai_model }}`), `ai_opencode_agent_plan_model` (default: `{{ ai_small_model }}`), `ai_opencode_agent_explore_model` (default: `{{ ai_small_model }}`), and `ai_opencode_agent_general_model` (default: `{{ ai_small_model }}`). These variables SHALL be referenced by the `ai_opencode_agents` dict and SHALL allow consumers to override individual agent models without replacing the entire agent configuration dict.

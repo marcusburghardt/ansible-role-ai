@@ -34,24 +34,28 @@
     src: opencode.json.j2
     dest: "{{ ai_opencode_config_file }}"
     mode: "0600"
+  notify: restart opencode service
 
 - name: "{{ role_name }} | {{ task.name }} | Deploy AI agent wrapper script"
   ansible.builtin.template:
     src: ai_agent_script.sh.j2
     dest: "{{ ai_user_scripts_dir }}/{{ ai_agent_script_name }}"
     mode: "0750"
+  notify: restart opencode service
 
 - name: "{{ role_name }} | {{ task.name }} | Deploy commit standards instruction file"
   ansible.builtin.copy:
     src: commit.md
     dest: "{{ ai_opencode_config_dir }}/commit.md"
     mode: "0640"
+  notify: restart opencode service
 
 - name: "{{ role_name }} | {{ task.name }} | Deploy coding standards instruction file"
   ansible.builtin.copy:
     src: coding-standards.md
     dest: "{{ ai_opencode_config_dir }}/coding-standards.md"
     mode: "0640"
+  notify: restart opencode service
 
 - name: "{{ role_name }} | {{ task.name }} | Discover built-in command files"
   ansible.builtin.find:
@@ -69,6 +73,7 @@
   loop_control:
     label: "{{ item.path | basename }}"
   when: (item.path | basename | regex_replace('\.md$', '')) not in ai_opencode_commands_disabled
+  notify: restart opencode service
 
 - name: "{{ role_name }} | {{ task.name }} | Deploy custom command files"
   ansible.builtin.copy:
@@ -79,6 +84,7 @@
   loop_control:
     label: "{{ item.name | default(item.src | basename) }}"
   when: ai_opencode_commands_custom | length > 0
+  notify: restart opencode service
 
 - name: "{{ role_name }} | {{ task.name }} | Discover built-in skill directories"
   ansible.builtin.find:
@@ -98,6 +104,7 @@
   loop_control:
     label: "{{ item.path | basename }}"
   when: (item.path | basename) not in ai_opencode_skills_disabled
+  notify: restart opencode service
 
 - name: "{{ role_name }} | {{ task.name }} | Deploy custom skills"
   ansible.builtin.copy:
@@ -109,6 +116,7 @@
   loop_control:
     label: "{{ item.name | default(item.src | basename) }}"
   when: ai_opencode_skills_custom | length > 0
+  notify: restart opencode service
 
 - name: "{{ role_name }} | {{ task.name }} | Validate local metrics plugin path"
   ansible.builtin.fail:
@@ -157,6 +165,7 @@
     path: "{{ ai_opencode_config_dir }}/plugins/opencode-metrics.ts"
     state: absent
   when: ai_opencode_metrics_version != 'local'
+  notify: restart opencode service
 
 - name: "{{ role_name }} | {{ task.name }} | Deploy metrics plugin loader (local mode)"
   ansible.builtin.template:
@@ -164,6 +173,7 @@
     dest: "{{ ai_opencode_config_dir }}/plugins/opencode-metrics.ts"
     mode: "0640"
   when: ai_opencode_metrics_version == 'local'
+  notify: restart opencode service
 
 - name: "{{ role_name }} | {{ task.name }} | Ensure metrics plugin data directory"
   ansible.builtin.file:
@@ -178,3 +188,4 @@
     dest: "{{ ai_opencode_metrics_data_dir }}/config.yaml"
     mode: "0644"
   when: ai_opencode_metrics_config | length > 0
+  notify: restart opencode service

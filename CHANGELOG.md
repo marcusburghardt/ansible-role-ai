@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+* Add `ai_enmaas_key_file` to load `ENMAAS_KEY` from a protected target-host file at launcher runtime, with argument forwarding for `skynet --standalone`.
+* Read EnMaaS API keys through OpenCode `{file:...}` provider substitution, so the shared background service authenticates without exported environment variables.
+* Restart the shared OpenCode service after installation or configuration changes (`ai_opencode_restart_service`), passing `ai_opencode_server_env` so command security checks keep working. A stopped service stays stopped.
+* Verify the `opencode` launcher after installation, remove dangling symlinks left by earlier installs, and recreate `opencode` from the `opencode2` alias when needed. `@opencode/cli` publishes both names for the same executable.
+
+### Breaking Changes
+
+* Migrate to OpenCode V2 (`@opencode/cli`), removing the V1 npm package before installation.
+* Generate native V2 configuration keys and provider settings; use `google-vertex` in model references.
+* Remove `ai_small_model`, `ai_opencode_options`, and `ai_opencode_disabled_providers`; all agent models default to `ai_model`.
+* Change permission overrides to ordered `{action, resource, effect}` lists with `shell` actions and last-match precedence. Preserve existing rules and external-directory approvals.
+* Use compaction `keep.tokens` and `buffer`, deploy commands to `commands/`, and remove `CLAUDE.md` from default instructions.
+* Disable the metrics plugin by default pending its V2 API migration; retain local development infrastructure and metrics data.
+
 ## [0.3.2](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.3.1...v0.3.2) (2026-10-05)
 
 

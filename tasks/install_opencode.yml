@@ -5,10 +5,111 @@
     state: directory
     mode: "0750"
 
-- name: "{{ role_name }} | {{ task.name }} | Install OpenCode (opencode-ai) via npm"
+- name: "{{ role_name }} | {{ task.name }} | Remove OpenCode V1 npm package"
   become: true
   community.general.npm:
     name: opencode-ai
+    state: absent
+    global: true
+
+- name: "{{ role_name }} | {{ task.name }} | Install OpenCode (@opencode/cli) via npm"
+  become: true
+  community.general.npm:
+    name: "@opencode/cli"
     version: "{{ ai_opencode_version if ai_opencode_version != 'latest' else omit }}"
     state: "{{ 'latest' if ai_opencode_version == 'latest' else 'present' }}"
     global: true
+  notify: restart opencode service
+
+# @opencode/cli publishes both 'opencode' and 'opencode2'. A leftover V1
+# launcher earlier on PATH can make 'opencode' resolve to a missing target,
+# which bash reports as "not found" while 'opencode2' keeps working.
+- name: "{{ role_name }} | {{ task.name }} | Report OpenCode launchers found on PATH"
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: |
+      for name in opencode opencode2; do
+        IFS=: read -ra dirs <<< "$PATH"
+        for dir in "${dirs[@]}"; do
+          [[ -n "$dir" ]] || continue
+          candidate="$dir/$name"
+          if [[ -L "$candidate" ]]; then
+            if [[ -e "$candidate" ]]; then
+              printf '%s: %s -> %s\n' "$name" "$candidate" "$(readlink -f "$candidate")"
+            else
+              printf '%s: %s -> DANGLING\n' "$name" "$candidate"
+            fi
+          elif [[ -f "$candidate" ]]; then
+            printf '%s: %s\n' "$name" "$candidate"
+          fi
+        done
+      done
+  register: _ai_opencode_launchers
+  changed_when: false
+
+- name: "{{ role_name }} | {{ task.name }} | Show OpenCode launchers found on PATH"
+  ansible.builtin.debug:
+    var: _ai_opencode_launchers.stdout_lines
+
+- name: "{{ role_name }} | {{ task.name }} | Check that the opencode command resolves"
+  ansible.builtin.command:
+    argv: [bash, -lc, "command -v opencode"]
+  register: _ai_opencode_launcher
+  changed_when: false
+  failed_when: false
+
+- name: "{{ role_name }} | {{ task.name }} | Resolve the opencode2 alias"
+  ansible.builtin.command:
+    argv: [bash, -lc, "command -v opencode2"]
+  register: _ai_opencode_fallback
+  changed_when: false
+  failed_when: false
+  when: _ai_opencode_launcher.rc != 0
+
+- name: "{{ role_name }} | {{ task.name }} | Remove dangling opencode launcher symlinks"
+  ansible.builtin.file:
+    path: >-
+      {{ item | regex_replace('^opencode: ', '')
+         | regex_replace(' -> DANGLING$', '') }}
+    state: absent
+  loop: "{{ _ai_opencode_launchers.stdout_lines | select('match', '^opencode: .* -> DANGLING$') | list }}"
+  loop_control:
+    label: "{{ item }}"
+  when: _ai_opencode_launcher.rc != 0
+
+- name: "{{ role_name }} | {{ task.name }} | Restore the opencode launcher from opencode2"
+  become: true
+  ansible.builtin.file:
+    src: "{{ _ai_opencode_fallback.stdout | basename }}"
+    dest: "{{ _ai_opencode_fallback.stdout | dirname }}/opencode"
+    state: link
+  when:
+    - _ai_opencode_launcher.rc != 0
+    - _ai_opencode_fallback.rc | default(1) == 0
+
+- name: "{{ role_name }} | {{ task.name }} | Re-check the opencode command"
+  ansible.builtin.command:
+    argv: [bash, -lc, "command -v opencode"]
+  register: _ai_opencode_launcher_recheck
+  changed_when: false
+  failed_when: false
+  when: _ai_opencode_launcher.rc != 0
+
+- name: "{{ role_name }} | {{ task.name }} | Fail when the opencode command does not resolve"
+  ansible.builtin.fail:
+    msg: |
+      The 'opencode' command does not resolve after installing @opencode/cli.
+      Dangling launcher symlinks were removed and, when available, 'opencode'
+      was relinked from the 'opencode2' alias.
+
+      Launchers found on PATH:
+      {{ _ai_opencode_launchers.stdout | default('(none)') }}
+
+      Login-shell lookup:
+      {{ _ai_opencode_launcher_recheck.stderr | default('') }}
+
+      Check that the npm global bin directory is on PATH, for example with
+      'npm config get prefix', then re-run the playbook.
+  when:
+    - _ai_opencode_launcher.rc != 0
+    - _ai_opencode_launcher_recheck.rc | default(1) != 0

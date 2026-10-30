@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Install and configure AI developer tools through independently selectable role tasks.
+
+## Requirements
 
 ### Requirement: Install Ollama as a managed tool
 The role SHALL provide an `install_ollama` entry in `ai_tasks`, enabled by default. The

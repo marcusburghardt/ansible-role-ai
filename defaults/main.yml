@@ -63,22 +63,21 @@ ai_ollama_models:
 
 # AI Model settings
 # Defaults to Ollama for a zero-cost out-of-box experience.
-# Override to use paid providers (e.g., "google-vertex-anthropic/claude-opus-4-6@default").
+# Override to use paid providers (e.g., "google-vertex/claude-opus-4-6@default").
 ai_model: "ollama/qwen3:8b"
-ai_small_model: "ollama/qwen3:8b"
 
 # Per-agent model routing
 # Each agent has its own model variable for independent override.
-# Defaults route build to ai_model and all others to ai_small_model.
+# All agents default to ai_model.
 # For Ollama users (same model everywhere), this is a harmless no-op.
 # For paid providers, override individual variables for cost-optimized routing.
 # Reference: https://gist.github.com/jflowers/c54514358abf892df84d5e6b8e7d7772
 ai_opencode_agent_build_model: "{{ ai_model }}"
-ai_opencode_agent_plan_model: "{{ ai_small_model }}"
-ai_opencode_agent_explore_model: "{{ ai_small_model }}"
-ai_opencode_agent_general_model: "{{ ai_small_model }}"
+ai_opencode_agent_plan_model: "{{ ai_model }}"
+ai_opencode_agent_explore_model: "{{ ai_model }}"
+ai_opencode_agent_general_model: "{{ ai_model }}"
 
-# Full agent configuration dict, rendered directly into the "agent" block
+# Full agent configuration dict, rendered directly into the "agents" block
 # of opencode.json. Uses the per-agent model variables above. Override
 # this dict only if agents gain non-model configuration knobs in the future.
 ai_opencode_agents:
@@ -92,10 +91,15 @@ ai_opencode_agents:
     model: "{{ ai_opencode_agent_general_model }}"
 
 # GCP settings for AI model access
-# Only relevant when google-vertex-anthropic is in ai_opencode_providers.
+# Only relevant when google-vertex is in ai_opencode_providers.
 # Harmlessly ignored otherwise.
 ai_gcp_project: "your-gcp-project"
 ai_vertex_location: "us-central1"
+
+# Optional protected file containing only the EnMaaS API key on the target host.
+# The launcher reads it at runtime; only its path is rendered by Ansible.
+# A leading ~/ resolves to ai_user_home_dir. Empty preserves the environment.
+ai_enmaas_key_file: ""
 
 # OpenCode provider configuration
 # Models from Ollama visible in OpenCode (independent of the pull list above).
@@ -105,27 +109,26 @@ ai_opencode_ollama_models:
     name: "Qwen 3 8B (local)"
 
 # Full provider catalog for OpenCode. This dict is rendered directly into the
-# "provider" block of opencode.json. Add, remove, or customize providers here.
+# "providers" block of opencode.json. Add, remove, or customize providers here.
 # The Ollama entry uses a Jinja reference to ai_opencode_ollama_models, which
 # Ansible resolves at template rendering time.
 ai_opencode_providers:
   ollama:
-    npm: "@ai-sdk/openai-compatible"
+    package: "aisdk:@ai-sdk/openai-compatible"
     name: "Ollama (local)"
-    options:
+    settings:
       baseURL: "http://localhost:11434/v1"
     models: "{{ ai_opencode_ollama_models }}"
-  google-vertex-anthropic:
+  google-vertex:
+    settings:
+      project: "{{ ai_gcp_project }}"
+      location: "{{ ai_vertex_location }}"
     models:
       claude-opus-4-6@default:
-        options:
+        settings:
           thinking:
             type: enabled
             budgetTokens: 32000
-
-# Providers that OpenCode should not auto-detect. Empty list means no providers
-# are disabled. Override to block specific providers (e.g., ["openai", "gemini"]).
-ai_opencode_disabled_providers: []
 
 # OpenCode metrics plugin
 # Pinned version of @mburghardt/opencode-metrics. Updated manually when
@@ -144,39 +147,39 @@ ai_opencode_metrics_local_path: ""
 ai_opencode_metrics_config: {}
 
 # OpenCode plugins
-# List of npm plugin packages for OpenCode. The metrics plugin is included by
-# default in npm mode. In local mode (version == "local"), the npm entry is
-# excluded and the plugin is loaded via a TypeScript loader file instead.
+# List of plugin packages for OpenCode V2. Empty by default while the metrics
+# plugin awaits migration to the V2 plugin API. Local loader deployment and
+# metrics configuration remain available for development.
 # Override to add, remove, or replace plugins.
-# OpenCode installs plugins automatically at startup via Bun.
-ai_opencode_plugins: >-
-  {{ [] if ai_opencode_metrics_version == 'local'
-     else ['@mburghardt/opencode-metrics@' + ai_opencode_metrics_version] }}
+ai_opencode_plugins: []
 
 # OpenCode configuration
 ai_opencode_config_dir: "{{ ai_user_home_dir }}/.config/opencode"
 ai_opencode_config_file: "{{ ai_opencode_config_dir }}/opencode.json"
 
-# Add a global options section to turn off the bugged schema
-ai_opencode_options:
-  thinking: false
+# OpenCode V2 runs one shared background server per user. Restart it when the
+# role changes the installation or configuration, so a new binary and new
+# provider settings take effect without a manual restart.
+# A service that is not running stays stopped; the role never starts it.
+# Restarting preserves stored sessions but interrupts in-flight requests.
+ai_opencode_restart_service: true
 
 # OpenCode permission overrides
-# Dict of permission rules merged on top of _ai_opencode_permissions_default
-# using combine(recursive=True). Keys match the OpenCode permission schema
-# (bash, read, edit, external_directory). Only specify rules you want to
-# add or override; defaults are preserved for all unmentioned keys.
-# Example: { bash: { "poetry *": "allow" }, read: { "*vault*": "deny" } }
-ai_opencode_permissions: {}
+# Ordered list appended to _ai_opencode_permissions_default (last match wins).
+# Each rule has action, resource, and effect (allow, ask, or deny) fields.
+# Actions include shell, read, edit, and external_directory.
+# Example: [{ action: shell, resource: "poetry *", effect: allow }]
+ai_opencode_permissions: []
 
 # OpenCode compaction settings
 # Controls automatic context compaction behavior. Rendered directly into the
-# "compaction" block of opencode.json. Override to tune reserved tokens,
-# disable pruning, or turn off auto-compaction.
+# "compaction" block of opencode.json. Override to tune retained context,
+# the token buffer, or turn off auto-compaction.
 ai_opencode_compaction:
   auto: true
-  prune: true
-  reserved: 10000
+  keep:
+    tokens: 15000
+  buffer: 10000
 
 # OpenCode instruction files
 # The ~/... path is resolved from the user's home directory (always loaded).
@@ -187,12 +190,17 @@ ai_opencode_instructions:
   - "~/.config/opencode/coding-standards.md"
   - ".specify/memory/constitution.md"
   - "AGENTS.md"
-  - "CLAUDE.md"
 
 # Trusted GitHub organizations for command security guards
 # Commands like checkout_pr and review_pr will verify the repo owner
 # against this list before proceeding. Empty list means always ask.
 ai_trusted_github_orgs: ['marcusburghardt', 'complytime', 'unbound-force']
+
+# Environment shared by both ways of starting OpenCode: the launcher script
+# exports it, and the role passes it when it restarts the shared service.
+# Keeping one dict avoids divergence between the two launch paths.
+ai_opencode_server_env:
+  TRUSTED_GITHUB_ORGS: "{{ ai_trusted_github_orgs | join(',') }}"
 
 # OpenCode commands
 # Built-in commands from files/commands/ are auto-discovered and deployed.

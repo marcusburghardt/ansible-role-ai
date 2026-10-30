@@ -8,7 +8,7 @@ in the existing defaults defined in `defaults/main.yml` and override them in a P
 This role will:
 - Install and manage Ollama for running open models locally (enabled by default);
 - Pull a curated selection of open models via Ollama (default: `qwen3:8b`);
-- Ensure OpenCode (opencode-ai) is installed and updated via npm;
+- Ensure OpenCode V2 (`@opencode/cli`) is installed and updated via npm;
 - Ensure OpenSPEC (@fission-ai/openspec) is installed and updated via npm;
 - Ensure SpecKit (specify-cli) is installed and updated via uv;
 - Deploy the OpenCode configuration file (`opencode.json`) with customizable model, provider, and permission settings;
@@ -50,29 +50,30 @@ Take a look in the Example Playbook section.
 | `ai_ollama_service_enabled` | `false` | Enable Ollama service to persist across reboots |
 | `ai_ollama_service_state` | `started` | Ollama service runtime state (`started` or `stopped`) |
 | `ai_ollama_models` | See defaults | Curated list of models to pull (with `enabled` flags) |
-| `ai_opencode_version` | `latest` | OpenCode version (`latest` or pinned, e.g., `1.2.3`) |
+| `ai_opencode_version` | `latest` | OpenCode V2 version (`latest` or pinned, e.g., `2.0.0`) |
 | `ai_openspec_version` | `latest` | OpenSPEC version (`latest` or pinned) |
 | `ai_speckit_version` | `latest` | SpecKit version (`latest` or pinned tag, e.g., `v0.4.4`) |
 | `ai_model` | `ollama/qwen3:8b` | Primary AI model |
-| `ai_small_model` | `ollama/qwen3:8b` | Small/fast AI model (background tasks) |
 | `ai_opencode_agent_build_model` | `{{ ai_model }}` | Model for build agent |
-| `ai_opencode_agent_plan_model` | `{{ ai_small_model }}` | Model for plan agent |
-| `ai_opencode_agent_explore_model` | `{{ ai_small_model }}` | Model for explore agent |
-| `ai_opencode_agent_general_model` | `{{ ai_small_model }}` | Model for general agent |
+| `ai_opencode_agent_plan_model` | `{{ ai_model }}` | Model for plan agent |
+| `ai_opencode_agent_explore_model` | `{{ ai_model }}` | Model for explore agent |
+| `ai_opencode_agent_general_model` | `{{ ai_model }}` | Model for general agent |
 | `ai_opencode_agents` | See defaults | Full agent routing dict (rendered into `opencode.json`) |
-| `ai_opencode_metrics_version` | `0.3.0` | Pinned version of the `@mburghardt/opencode-metrics` plugin (set to `"local"` for local dev) |
+| `ai_opencode_metrics_version` | `0.3.0` | Metrics version retained for development; plugin disabled by default pending V2 port (set to `"local"` for local dev) |
 | `ai_opencode_metrics_local_path` | `""` | Path to local opencode-metrics repo (only used when version is `"local"`) |
 | `ai_opencode_metrics_config` | `{}` | Optional metrics plugin config dict (deployed as `config.yaml` when non-empty) |
 | `ai_opencode_metrics_data_dir` | `~/.local/share/opencode-metrics` | Metrics plugin data directory (bind-mounted into Grafana container) |
-| `ai_opencode_plugins` | `["@mburghardt/opencode-metrics@..."]` | List of npm plugin packages for OpenCode (metrics plugin included by default) |
-| `ai_opencode_compaction` | See defaults | Compaction settings dict (`auto`, `prune`, `reserved`) |
+| `ai_opencode_plugins` | `[]` | V2 plugins; metrics excluded pending V2 migration |
+| `ai_opencode_permissions` | `[]` | Ordered permission rules appended to defaults; last match wins |
+| `ai_opencode_compaction` | See defaults | Compaction settings dict (`auto`, `keep.tokens`, `buffer`) |
 | `ai_opencode_providers` | See defaults | Provider catalog for OpenCode (rendered into `opencode.json`) |
 | `ai_opencode_ollama_models` | See defaults | Ollama models visible in OpenCode (subset of pulled models) |
-| `ai_opencode_disabled_providers` | `[]` | Providers that OpenCode should not auto-detect |
 | `ai_gcp_project` | `your-gcp-project` | GCP project for Vertex AI (see note below) |
 | `ai_vertex_location` | `us-central1` | GCP Vertex AI region (see note below) |
+| `ai_enmaas_key_file` | `""` | Protected API-key file on the target host, readable by the OpenCode server |
+| `ai_opencode_restart_service` | `true` | Restart the shared OpenCode service after the role changes its installation or configuration |
 | `ai_agent_script_name` | `skynet` | Name of the wrapper script in `~/bin/` |
-| `ai_opencode_instructions` | `[".specify/memory/constitution.md", "AGENTS.md", "CLAUDE.md"]` | Instruction files for OpenCode |
+| `ai_opencode_instructions` | See defaults | Global commit/coding standards, `.specify/memory/constitution.md`, and `AGENTS.md` |
 | `ai_trusted_github_orgs` | `[]` | Trusted GitHub organizations for command security |
 | `ai_opencode_commands_disabled` | `[]` | Built-in command names to skip (without `.md`) |
 | `ai_opencode_commands_custom` | `[]` | Custom commands to deploy (list of `src`/`name` dicts) |
@@ -182,26 +183,18 @@ ai_opencode_ollama_models:
 ### Provider Configuration
 
 The OpenCode provider catalog is fully data-driven via the `ai_opencode_providers`
-variable. By default, both Ollama and Google Vertex Anthropic are configured. Override
+variable. By default, both Ollama and Google Vertex are configured. Override
 this variable to add, remove, or customize providers:
 
 ```yaml
 # Ollama-only setup (remove Vertex entirely)
 ai_opencode_providers:
   ollama:
-    npm: "@ai-sdk/openai-compatible"
+    package: "aisdk:@ai-sdk/openai-compatible"
     name: "Ollama (local)"
-    options:
+    settings:
       baseURL: "http://localhost:11434/v1"
     models: "{{ ai_opencode_ollama_models }}"
-```
-
-To prevent OpenCode from auto-detecting unconfigured providers:
-
-```yaml
-ai_opencode_disabled_providers:
-  - openai
-  - gemini
 ```
 
 ### Google Vertex AI Configuration
@@ -212,13 +205,82 @@ variables to your real values in your playbook:
 ```yaml
 ai_gcp_project: "my-actual-gcp-project"
 ai_vertex_location: "us-east5"
-ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
-ai_small_model: "anthropic/claude-sonnet-4-5"
+ai_model: "google-vertex/claude-opus-4-6@default"
+ai_opencode_agent_explore_model: "anthropic/claude-sonnet-4-5"
 ```
 
-If you are **not** using Vertex AI, these variables are harmlessly ignored. The wrapper
-script only exports GCP environment variables when `google-vertex-anthropic` is present
-in `ai_opencode_providers`.
+These values are written to `providers.google-vertex.settings.project` and
+`settings.location`. They are unused when `google-vertex` is removed from
+`ai_opencode_providers`. Authenticate through Google Application Default Credentials.
+
+### EnMaaS API Key File
+
+Store only the API key as plain text in a protected file on each target host
+(for example, `~/.config/enmaas/api-key` with mode `0600`). Set its absolute path in
+the playbook so it is unambiguous for every consumer:
+
+```yaml
+ai_enmaas_key_file: "{{ ai_user_home_dir }}/.config/enmaas/api-key"
+```
+
+Point the provider at the file instead of an environment variable:
+
+```yaml
+ai_opencode_providers:
+  enmaas:
+    name: "EnMaaS"
+    package: "@opencode/ai/providers/openai-compatible"
+    settings:
+      baseURL: "https://api.enmaas.devshift.net/v1"
+      apiKey: "{file:{{ ai_enmaas_key_file }}}"
+```
+
+The OpenCode server reads the file itself, so the shared background service works
+regardless of how or when it was started. Ansible renders only the path; the key
+is neither read during deployment nor embedded in generated files.
+
+`{file:...}` substitutes the contents literally, so the file must not end with a
+newline:
+
+```bash
+printf '%s' "$(cat ~/.config/enmaas/api-key)" > ~/.config/enmaas/api-key.trimmed
+mv ~/.config/enmaas/api-key.trimmed ~/.config/enmaas/api-key
+chmod 600 ~/.config/enmaas/api-key
+```
+
+The launcher also exports `ENMAAS_KEY` when `ai_enmaas_key_file` is set, which
+keeps `--standalone` and other tools working. A configured unreadable or empty
+file stops the launcher.
+
+### Shared Background Service
+
+OpenCode V2 clients talk to one per-user background server. The role restarts it
+automatically when a playbook run changes the installation or configuration:
+
+```yaml
+ai_opencode_restart_service: true   # default
+```
+
+- Only a running service is restarted; the role never starts one.
+- Stored sessions survive a restart; in-flight requests are interrupted.
+- The restarted service receives `ai_opencode_server_env` (`TRUSTED_GITHUB_ORGS`),
+  the same environment the launcher exports, so command security checks keep
+  working.
+- Set the variable to `false` to manage restarts manually.
+
+Because a service restarted by Ansible does not inherit the launcher's
+environment, provider credentials belong in provider settings (for example,
+`apiKey: "{file:...}"`) rather than in exported variables.
+
+### Launcher Verification
+
+After installing `@opencode/cli`, the role reports every `opencode` and
+`opencode2` launcher found on `PATH`. The V2 package publishes both names as
+aliases for the same executable. If `opencode` does not resolve, the role removes
+dangling launcher symlinks left by earlier installs and recreates `opencode` as a
+symlink to `opencode2` when that alias resolves. When it still cannot resolve,
+the play fails with the discovered paths instead of deploying a launcher that
+cannot start.
 
 ### Cost Optimization (Paid Providers)
 
@@ -230,43 +292,25 @@ by [jflowers](https://github.com/jflowers).
 
 **Agent model routing:**
 
-The role assigns each OpenCode agent its own model variable. By default, `build` uses
-`ai_model` and all other agents (`plan`, `explore`, `general`) use `ai_small_model`.
-For Ollama users this is a no-op (same model everywhere). For paid providers, setting
-different primary and small models activates routing automatically:
+The role assigns each OpenCode agent its own model variable, all defaulting to
+`ai_model`. For three-tier routing (Opus / Sonnet / Haiku), override individual
+agent variables:
 
 ```yaml
-ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
-ai_small_model: "google-vertex-anthropic/claude-haiku-4-5@20251001"
-```
-
-For three-tier routing (Opus / Sonnet / Haiku), override individual agent variables:
-
-```yaml
-ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
-ai_small_model: "google-vertex-anthropic/claude-haiku-4-5@20251001"
-ai_opencode_agent_plan_model: "google-vertex-anthropic/claude-sonnet-4-6@default"
-ai_opencode_agent_general_model: "google-vertex-anthropic/claude-sonnet-4-6@default"
+ai_model: "google-vertex/claude-opus-4-6@default"
+ai_opencode_agent_explore_model: "google-vertex/claude-haiku-4-5@20251001"
+ai_opencode_agent_plan_model: "google-vertex/claude-sonnet-4-6@default"
+ai_opencode_agent_general_model: "google-vertex/claude-sonnet-4-6@default"
 ```
 
 This routes build to Opus, plan/general to Sonnet, and explore to Haiku.
 
-**Plugins (metrics included by default):**
+**Plugins (metrics pending V2 migration):**
 
 The [`@mburghardt/opencode-metrics`](https://github.com/marcusburghardt/opencode-metrics)
-plugin is included by default, giving every user automatic metrics collection out of the
-box. The version is pinned via `ai_opencode_metrics_version` (default: `0.3.0`).
-
-To add more plugins alongside the default:
-
-```yaml
-ai_opencode_plugins:
-  - "@mburghardt/opencode-metrics@{{ ai_opencode_metrics_version }}"
-  - "@angdrew/opencode-hashline-plugin"   # content-addressable edits
-  - "@tarquinen/opencode-dcp"             # dynamic context pruning
-```
-
-To remove the metrics plugin and start with an empty list:
+plugin is temporarily excluded until ported to the V2 plugin API. Its version
+variable remains pinned to `0.3.0`, but changing it does not enable the plugin.
+Override `ai_opencode_plugins` to load V2-compatible plugins. The default is:
 
 ```yaml
 ai_opencode_plugins: []
@@ -277,9 +321,8 @@ files (e.g., `dcp.jsonc`) are managed by the user outside this role.
 
 **Local development of opencode-metrics:**
 
-When developing the `opencode-metrics` plugin locally, you can bypass npm and load the
-plugin directly from a local repository checkout. This avoids publishing a new release
-for every change during development.
+The role retains the local loader and configuration deployment for development of
+the V2 port. The local plugin must implement the V2 API before it can run in V2.
 
 Workflow:
 
@@ -291,10 +334,10 @@ Workflow:
    ai_opencode_metrics_local_path: "~/GIT/me/opencode-metrics"
    ```
 4. Run the playbook to deploy the loader file
-5. Restart OpenCode to pick up the changes
+5. OpenCode reloads configuration automatically; use `/reload` to force a reload
 
 The role writes a TypeScript loader file at `~/.config/opencode/plugins/opencode-metrics.ts`
-that imports the plugin from the local path, and removes the npm entry from `opencode.json`.
+that imports the plugin from the local path. The default `plugins` list remains empty.
 A leading `~` in the path is expanded to the target user's home directory.
 
 **Switching back to npm mode:**
@@ -303,8 +346,8 @@ To switch back from local to npm-managed installation:
 
 1. Set `ai_opencode_metrics_version` back to a semver string (e.g., `"0.2.0"`) or `"latest"`
 2. Remove or leave `ai_opencode_metrics_local_path` as-is (it is ignored in npm mode)
-3. Run the playbook -- the loader file is removed automatically and the npm entry is
-   restored in `opencode.json`
+3. Run the playbook -- the loader file is removed automatically. The default
+   `plugins` list remains empty until the V2 plugin migration is complete
 
 **Metrics plugin configuration (optional):**
 
@@ -331,37 +374,56 @@ When non-empty, the role deploys the config to `{{ ai_opencode_metrics_data_dir 
 **Compaction tuning:**
 
 The role deploys compaction settings via the `ai_opencode_compaction` variable. The
-defaults enable automatic compaction with output pruning:
+defaults enable automatic compaction with a retained-context token budget:
 
 ```yaml
 ai_opencode_compaction:
   auto: true
-  prune: true
-  reserved: 10000    # tokens reserved for the model's response
+  keep:
+    tokens: 15000    # recent context retained
+  buffer: 10000     # reserved token buffer
 ```
 
 Override to tune for your context window size or disable compaction entirely.
 
-### Migration from Previous Versions
+### Migration to OpenCode V2
 
-Previous versions of this role defaulted to `google-vertex-anthropic` as the primary
-provider with hardcoded provider configuration. If you are upgrading, note:
+- The role removes the global V1 `opencode-ai` npm package before installing
+  `@opencode/cli`. Version pins must target V2.
+- `ai_small_model`, `ai_opencode_options`, and `ai_opencode_disabled_providers`
+  have been removed. Use `ai_model` or individual agent model variables for routing.
+- Provider overrides use `package` instead of `npm` (AI SDK packages require the
+  `aisdk:` prefix) and `settings` instead of `options`. Replace
+  `google-vertex-anthropic` with `google-vertex` in provider keys and model references.
+- Compaction uses `keep.tokens` and `buffer`; replace `reserved` with `buffer`
+  and remove `prune`.
+- Permissions are ordered lists instead of nested dictionaries. Use `shell`
+  instead of `bash`. User rules follow defaults, so the last matching rule wins:
 
-- **`ai_model`** now defaults to `ollama/qwen3:8b` instead of
-  `google-vertex-anthropic/claude-opus-4-6@default`
-- **`ai_small_model`** now defaults to `ollama/qwen3:8b` instead of
-  `anthropic/claude-sonnet-4-5`
-- **Provider block** in `opencode.json` is now driven by `ai_opencode_providers`
-  instead of being hardcoded
-- **`disabled_providers`** is now driven by `ai_opencode_disabled_providers` (defaults
-  to empty instead of `["openai", "gemini"]`)
+  ```yaml
+  ai_opencode_permissions:
+    - { action: shell, resource: "poetry *", effect: allow }
+    - { action: shell, resource: "git push *", effect: allow }
+  ```
 
-To restore the previous Vertex-only behavior:
+  Default credential-read and system-path denials remain in place. An explicit
+  external-directory `ask` default preserves V1 approval behavior.
+- Commands deploy to `~/.config/opencode/commands/`. Existing files in the old
+  `command/` directory are left in place; V2 still discovers that directory.
+- Move project instructions from `CLAUDE.md` to `AGENTS.md`.
+- Metrics collection is disabled by default pending the plugin's V2 port.
+  Existing metrics data is retained.
+
+For a Vertex-only setup:
 
 ```yaml
-ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
-ai_small_model: "anthropic/claude-sonnet-4-5"
-ai_opencode_disabled_providers: ["openai", "gemini"]
+ai_model: "google-vertex/claude-opus-4-6@default"
+ai_opencode_agent_explore_model: "anthropic/claude-sonnet-4-5"
+ai_opencode_providers:
+  google-vertex:
+    settings:
+      project: "{{ ai_gcp_project }}"
+      location: "{{ ai_vertex_location }}"
 ai_tasks:
   - { enabled: false, name: 'install_dependencies' }
   - { enabled: false, name: 'install_ollama' }
@@ -392,7 +454,7 @@ proceeding.
 ### Commands
 
 Built-in commands (`.md` files in `files/commands/`) are **auto-discovered** and deployed
-to `~/.config/opencode/command/`. Adding or removing a command file from the role
+to `~/.config/opencode/commands/`. Adding or removing a command file from the role
 requires no changes to task YAML -- it is picked up automatically.
 
 **Disable specific built-in commands** by adding their name (without `.md`) to the blocklist:
@@ -584,8 +646,8 @@ Example Playbook
 ---
 - hosts: my_linux
   vars:
-    ai_model: "google-vertex-anthropic/claude-opus-4-6@default"
-    ai_small_model: "anthropic/claude-sonnet-4-5"
+    ai_model: "google-vertex/claude-opus-4-6@default"
+    ai_opencode_agent_explore_model: "anthropic/claude-sonnet-4-5"
     ai_gcp_project: "my-gcp-project"
     ai_vertex_location: "us-east5"
   roles:
@@ -607,7 +669,7 @@ Example Playbook
       qwen3:32b:
         name: "Qwen 3 32B (local)"
     ai_model: "ollama/qwen3:32b"
-    ai_small_model: "ollama/qwen3:8b"
+    ai_opencode_agent_explore_model: "ollama/qwen3:8b"
     ai_ollama_service_enabled: true
   roles:
     - ansible-role-ai
@@ -619,7 +681,7 @@ Example Playbook
 ---
 - hosts: my_linux
   vars:
-    ai_opencode_version: "1.2.3"
+    ai_opencode_version: "2.0.0"
     ai_openspec_version: "1.0.0"
     ai_speckit_version: "v0.4.4"
   roles:

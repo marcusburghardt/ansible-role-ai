@@ -1,9 +1,14 @@
 ---
 # Smoke test: exercises the dispatcher and configuration deployment
 # without requiring npm, uv, or GitHub API access.
-- hosts: localhost
-  remote_user: root
+- name: Verify OpenCode V2 configuration deployment
+  hosts: localhost
+  connection: local
+  environment:
+    PATH: "{{ _ai_test_bin.path | default('/usr/bin:/bin') }}:{{ lookup('env', 'PATH') }}"
+    FAKE_OPENCODE_MARKER: "{{ _ai_test_bin.path | default('/nonexistent') }}/restarted"
   vars:
+    ai_user_home_dir: "{{ _ai_test_home.path }}"
     ai_tasks:
       - {enabled: false, name: 'install_dependencies'}
       - {enabled: false, name: 'install_ollama'}
@@ -13,5 +18,245 @@
       - {enabled: false, name: 'cleanup_opencode'}
       - {enabled: false, name: 'install_openspec'}
       - {enabled: false, name: 'install_speckit'}
+  pre_tasks:
+    - name: Create isolated test home
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: ansible-role-ai-test-
+      register: _ai_test_home
+
+    - name: Create isolated test bin directory
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: ansible-role-ai-bin-
+      register: _ai_test_bin
+
+    - name: Install fake opencode binary
+      ansible.builtin.copy:
+        dest: "{{ _ai_test_bin.path }}/opencode"
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          case "$1 $2" in
+            "service status") exit 0 ;;
+            "service restart") printf '%s\n' "${TRUSTED_GITHUB_ORGS:-}" > "${FAKE_OPENCODE_MARKER}" ;;
+          esac
   roles:
     - ansible-role-ai
+  post_tasks:
+    - name: Read deployed configuration
+      ansible.builtin.slurp:
+        src: "{{ ai_opencode_config_file }}"
+      register: _ai_config_file
+
+    - name: Parse deployed configuration
+      ansible.builtin.set_fact:
+        _ai_config: "{{ _ai_config_file.content | b64decode | from_json }}"
+
+    - name: Check configuration permissions
+      ansible.builtin.stat:
+        path: "{{ ai_opencode_config_file }}"
+      register: _ai_config_stat
+
+    - name: Verify V2 configuration defaults
+      ansible.builtin.assert:
+        that:
+          - _ai_config_stat.stat.mode == '0600'
+          - _ai_config['$schema'] == 'https://opencode.ai/config.json'
+          - _ai_config.model == 'ollama/qwen3:8b'
+          - _ai_config['update'] == 'notify'
+          - _ai_config.plugins == []
+          - _ai_config.agents.keys() | sort == ['build', 'explore', 'general', 'plan']
+          - _ai_config.agents.values() | map(attribute='model') | unique | list == ['ollama/qwen3:8b']
+          - _ai_config.providers.ollama.package == 'aisdk:@ai-sdk/openai-compatible'
+          - _ai_config.providers.ollama.settings.baseURL == 'http://localhost:11434/v1'
+          - _ai_config.providers['google-vertex'].settings.project == ai_gcp_project
+          - _ai_config.providers['google-vertex'].settings.location == ai_vertex_location
+          - "'google-vertex-anthropic' not in _ai_config.providers"
+          - "_ai_config.compaction == {'auto': true, 'keep': {'tokens': 15000}, 'buffer': 10000}"
+          - _ai_config.instructions == ['~/.config/opencode/commit.md', '~/.config/opencode/coding-standards.md', '.specify/memory/constitution.md', 'AGENTS.md']
+          - >-
+            _ai_config.keys() | intersect(['small_model', 'share', 'options', 'disabled_providers',
+            'autoupdate', 'permission', 'plugin', 'agent', 'provider']) | length == 0
+
+    - name: Verify permission rule format
+      ansible.builtin.assert:
+        that:
+          - item.keys() | sort == ['action', 'effect', 'resource']
+          - item.action in ['shell', 'read', 'edit', 'external_directory']
+          - item.effect in ['allow', 'ask', 'deny']
+          - item.resource is string
+      loop: "{{ _ai_config.permissions }}"
+      loop_control:
+        label: "{{ item.action }}:{{ item.resource }}"
+
+    - name: Verify default permission ordering and exceptions
+      ansible.builtin.assert:
+        that:
+          - "_ai_config.permissions[0] == {'action': 'shell', 'resource': '*', 'effect': 'ask'}"
+          - >-
+            _ai_config.permissions | selectattr('action', 'equalto', 'shell') | selectattr('resource', 'equalto', 'git push *')
+            | map(attribute='effect') | list == ['ask']
+          - >-
+            _ai_config.permissions | selectattr('action', 'equalto', 'read') | selectattr('resource', 'equalto', '*.env')
+            | map(attribute='effect') | list == ['deny']
+          - >-
+            (_ai_config.permissions | selectattr('action', 'equalto', 'external_directory') | first)
+            == {'action': 'external_directory', 'resource': '*', 'effect': 'ask'}
+          - >-
+            _ai_config.permissions | selectattr('action', 'equalto', 'external_directory') | selectattr('resource', 'equalto', '/tmp/**')
+            | map(attribute='effect') | list == ['allow']
+          - >-
+            _ai_config.permissions | selectattr('action', 'equalto', 'external_directory') | selectattr('effect', 'equalto', 'deny')
+            | map(attribute='resource') | list == ['/boot/**', '/etc/**', '/proc/**', '/sys/**', '/usr/**', '/var/**']
+
+    - name: Check deployed built-in commands in plural directory
+      ansible.builtin.stat:
+        path: "{{ ai_opencode_config_dir }}/commands/{{ item.path | basename }}"
+      loop: "{{ _ai_builtin_commands.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      register: _ai_command_stats
+
+    - name: Verify all built-in commands were deployed
+      ansible.builtin.assert:
+        that:
+          - _ai_command_stats.results | length > 0
+          - _ai_command_stats.results | selectattr('stat.exists', 'equalto', true) | list | length == _ai_builtin_commands.files | length
+
+    - name: Read wrapper script
+      ansible.builtin.slurp:
+        src: "{{ ai_user_scripts_dir }}/{{ ai_agent_script_name }}"
+      register: _ai_wrapper
+
+    - name: Verify wrapper environment
+      ansible.builtin.assert:
+        that:
+          - "'export GCP_PROJECT=' not in (_ai_wrapper.content | b64decode)"
+          - "'export VERTEX_LOCATION=' not in (_ai_wrapper.content | b64decode)"
+          - "'export TRUSTED_GITHUB_ORGS=' in (_ai_wrapper.content | b64decode)"
+          - "'exec opencode \"$@\"' in (_ai_wrapper.content | b64decode)"
+          - "'opencode2' not in (_ai_wrapper.content | b64decode)"
+
+    - name: Render configuration with consumer overrides
+      ansible.builtin.set_fact:
+        _ai_overridden_config: "{{ lookup('ansible.builtin.template', '../templates/opencode.json.j2') | from_json }}"
+      vars:
+        ai_model: anthropic/claude-sonnet-4-5
+        ai_opencode_agent_plan_model: google-vertex/claude-sonnet-4-6@default
+        ai_gcp_project: test-project
+        ai_vertex_location: us-east5
+        ai_opencode_permissions:
+          - { action: shell, resource: "git push *", effect: allow }
+          - { action: shell, resource: "poetry *", effect: allow }
+        ai_opencode_plugins: ['example-v2-plugin']
+        ai_opencode_compaction: { auto: false, keep: { tokens: 24000 }, buffer: 16000 }
+        ai_opencode_instructions: ['CUSTOM.md']
+
+    - name: Verify consumer overrides and last-match precedence
+      ansible.builtin.assert:
+        that:
+          - _ai_overridden_config.model == 'anthropic/claude-sonnet-4-5'
+          - _ai_overridden_config.agents.plan.model == 'google-vertex/claude-sonnet-4-6@default'
+          - _ai_overridden_config.agents.build.model == 'anthropic/claude-sonnet-4-5'
+          - _ai_overridden_config.agents.explore.model == 'anthropic/claude-sonnet-4-5'
+          - _ai_overridden_config.agents.general.model == 'anthropic/claude-sonnet-4-5'
+          - _ai_overridden_config.providers['google-vertex'].settings.project == 'test-project'
+          - _ai_overridden_config.providers['google-vertex'].settings.location == 'us-east5'
+          - _ai_overridden_config.permissions[:-2] == _ai_config.permissions
+          - "_ai_overridden_config.permissions[-2] == {'action': 'shell', 'resource': 'git push *', 'effect': 'allow'}"
+          - "_ai_overridden_config.permissions[-1] == {'action': 'shell', 'resource': 'poetry *', 'effect': 'allow'}"
+          - _ai_overridden_config.plugins == ['example-v2-plugin']
+          - "_ai_overridden_config.compaction == {'auto': false, 'keep': {'tokens': 24000}, 'buffer': 16000}"
+          - _ai_overridden_config.instructions == ['CUSTOM.md']
+
+    - name: Verify launcher credential loading
+      ansible.builtin.include_tasks: test_wrapper.yml
+
+    - name: Flush handlers to exercise the shared service restart
+      ansible.builtin.meta: flush_handlers
+
+    - name: Read fake service restart marker
+      ansible.builtin.slurp:
+        src: "{{ _ai_test_bin.path }}/restarted"
+      register: _ai_restart_marker
+
+    - name: Verify the shared service restarted with the server environment
+      ansible.builtin.assert:
+        that:
+          - (_ai_restart_marker.content | b64decode | trim) == (ai_trusted_github_orgs | join(','))
+
+    - name: Remove isolated test home
+      ansible.builtin.file:
+        path: "{{ _ai_test_home.path }}"
+        state: absent
+
+    - name: Remove isolated test bin directory
+      ansible.builtin.file:
+        path: "{{ _ai_test_bin.path }}"
+        state: absent
+
+- name: Verify the shared service restart can be disabled
+  hosts: localhost
+  connection: local
+  environment:
+    PATH: "{{ _ai_disabled_bin.path | default('/usr/bin:/bin') }}:{{ lookup('env', 'PATH') }}"
+    FAKE_OPENCODE_MARKER: "{{ _ai_disabled_bin.path | default('/nonexistent') }}/restarted"
+  vars:
+    ai_user_home_dir: "{{ _ai_disabled_home.path }}"
+    ai_opencode_restart_service: false
+    ai_tasks:
+      - {enabled: false, name: 'install_dependencies'}
+      - {enabled: false, name: 'install_ollama'}
+      - {enabled: false, name: 'configure_ollama'}
+      - {enabled: false, name: 'install_opencode'}
+      - {enabled: true, name: 'configure_opencode'}
+      - {enabled: false, name: 'cleanup_opencode'}
+      - {enabled: false, name: 'install_openspec'}
+      - {enabled: false, name: 'install_speckit'}
+  pre_tasks:
+    - name: Create isolated test home for the disabled case
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: ansible-role-ai-disabled-
+      register: _ai_disabled_home
+
+    - name: Create isolated test bin directory for the disabled case
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: ansible-role-ai-disabled-bin-
+      register: _ai_disabled_bin
+
+    - name: Install fake opencode binary for the disabled case
+      ansible.builtin.copy:
+        dest: "{{ _ai_disabled_bin.path }}/opencode"
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          case "$1 $2" in
+            "service status") exit 0 ;;
+            "service restart") printf '%s\n' "${TRUSTED_GITHUB_ORGS:-}" > "${FAKE_OPENCODE_MARKER}" ;;
+          esac
+  roles:
+    - ansible-role-ai
+  post_tasks:
+    - name: Flush handlers with restarts disabled
+      ansible.builtin.meta: flush_handlers
+
+    - name: Check that no service restart happened
+      ansible.builtin.stat:
+        path: "{{ _ai_disabled_bin.path }}/restarted"
+      register: _ai_disabled_marker
+
+    - name: Verify the shared service restart was skipped
+      ansible.builtin.assert:
+        that:
+          - not _ai_disabled_marker.stat.exists
+
+    - name: Remove disabled-case test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ _ai_disabled_home.path }}"
+        - "{{ _ai_disabled_bin.path }}"

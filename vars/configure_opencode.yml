@@ -1,6 +1,6 @@
 ---
 # vars file for configure_opencode task
-ai_opencode_command_dir: "{{ ai_opencode_config_dir }}/command"
+ai_opencode_command_dir: "{{ ai_opencode_config_dir }}/commands"
 ai_opencode_skills_dir: "{{ ai_opencode_config_dir }}/skills"
 
 # Resolved skills deploy directory based on ai_skills_target
@@ -21,148 +21,144 @@ _ai_metrics_local_path_expanded: >-
      else '' }}
 
 # Default permission rules for OpenCode.
-# Three-tier structure: allow > ask > deny (last matching rule wins).
-# Users overlay custom rules via ai_opencode_permissions in their playbook;
-# the role merges both dicts with combine(recursive=True).
+# Ordered exceptions: broad defaults, allows, asks, then denies.
+# Last matching rule wins; user rules are appended after these defaults.
 _ai_opencode_permissions_default:
-  bash:
-    # --- catch-all default ---
-    "*": "ask"
-    # --- ALLOW: read-only inspection and dev tools ---
-    ".specify/scripts/bash/*": "allow"
-    "ansible-lint *": "allow"
-    "cat *": "allow"
-    "cd *": "allow"
-    "date *": "allow"
-    "diff *": "allow"
-    "echo *": "allow"
-    "file *": "allow"
-    "find *": "allow"
-    "gh *": "allow"
-    "git -C *": "allow"
-    "git add *": "allow"
-    "git blame *": "allow"
-    "git branch *": "allow"
-    "git checkout *": "allow"
-    "git config *": "allow"
-    "git diff *": "allow"
-    "git fetch *": "allow"
-    "git log *": "allow"
-    "git ls-files *": "allow"
-    "git ls-remote *": "allow"
-    "git ls-tree *": "allow"
-    "git merge-base *": "allow"
-    "git mv *": "allow"
-    "git pull *": "allow"
-    "git remote *": "allow"
-    "git rev-parse *": "allow"
-    "git show *": "allow"
-    "git show-ref *": "allow"
-    "git stash *": "allow"
-    "git status *": "allow"
-    "git symbolic-ref *": "allow"
-    "golangci-lint *": "allow"
-    "grep *": "allow"
-    "head *": "allow"
-    "jq *": "allow"
-    "less *": "allow"
-    "ls *": "allow"
-    "openspec *": "allow"
-    "rg *": "allow"
-    "ruff *": "allow"
-    "sort *": "allow"
-    "tail *": "allow"
-    "test *": "allow"
-    "tree *": "allow"
-    "wc *": "allow"
-    "which *": "allow"
-    "yamllint *": "allow"
-    # --- ASK: git write operations ---
-    "git commit *": "ask"
-    "git merge *": "ask"
-    "git push *": "ask"
-    "git rebase *": "ask"
-    "git reset *": "ask"
-    "git tag *": "ask"
-    # --- ASK: GitHub write operations ---
-    "gh api --method DELETE *": "ask"
-    "gh api --method PATCH *": "ask"
-    "gh api --method POST *": "ask"
-    "gh api --method PUT *": "ask"
-    "gh api -X DELETE *": "ask"
-    "gh api -X PATCH *": "ask"
-    "gh api -X POST *": "ask"
-    "gh api -X PUT *": "ask"
-    "gh api graphql *": "ask"
-    "gh issue close *": "ask"
-    "gh issue comment *": "ask"
-    "gh issue create *": "ask"
-    "gh issue edit *": "ask"
-    "gh pr close *": "ask"
-    "gh pr comment *": "ask"
-    "gh pr create *": "ask"
-    "gh pr edit *": "ask"
-    "gh pr merge *": "ask"
-    "gh pr review *": "ask"
-    "gh release create *": "ask"
-    # --- ASK: file deletion ---
-    "rm *": "ask"
-    # --- DENY: system administration ---
-    "at *": "deny"
-    "chown *": "deny"
-    "crontab *": "deny"
-    "dd *": "deny"
-    "dnf *": "deny"
-    "fdisk *": "deny"
-    "firewall-cmd *": "deny"
-    "iptables *": "deny"
-    "kill *": "deny"
-    "killall *": "deny"
-    "mkfs *": "deny"
-    "mount *": "deny"
-    "nft *": "deny"
-    "pkill *": "deny"
-    "reboot": "deny"
-    "shutdown *": "deny"
-    "su *": "deny"
-    "sudo *": "deny"
-    "systemctl *": "deny"
-    "umount *": "deny"
-  read:
-    # --- default ---
-    "*": "allow"
-    # --- DENY: secrets and credentials ---
-    "*.cer": "deny"
-    "*.crt": "deny"
-    "*.env": "deny"
-    "*.env.*": "deny"
-    "*.jks": "deny"
-    "*.kdbx": "deny"
-    "*.key": "deny"
-    "*.keystore": "deny"
-    "*.p12": "deny"
-    "*.p8": "deny"
-    "*.pem": "deny"
-    "*.pfx": "deny"
-    "*.priv*": "deny"
-    "*.secret*": "deny"
-    "*id_ecdsa*": "deny"
-    "*id_ed25519*": "deny"
-    "*id_rsa*": "deny"
-  edit: "allow"
-  external_directory:
-    # --- ALLOW ---
-    "/tmp/**": "allow"
-    # --- DENY: system paths ---
-    "/boot/**": "deny"
-    "/etc/**": "deny"
-    "/proc/**": "deny"
-    "/sys/**": "deny"
-    "/usr/**": "deny"
-    "/var/**": "deny"
+  # --- shell catch-all ---
+  - { action: shell, resource: "*", effect: ask }
+  # --- ALLOW: read-only inspection and dev tools ---
+  - { action: shell, resource: ".specify/scripts/bash/*", effect: allow }
+  - { action: shell, resource: "ansible-lint *", effect: allow }
+  - { action: shell, resource: "cat *", effect: allow }
+  - { action: shell, resource: "cd *", effect: allow }
+  - { action: shell, resource: "date *", effect: allow }
+  - { action: shell, resource: "diff *", effect: allow }
+  - { action: shell, resource: "echo *", effect: allow }
+  - { action: shell, resource: "file *", effect: allow }
+  - { action: shell, resource: "find *", effect: allow }
+  - { action: shell, resource: "gh *", effect: allow }
+  - { action: shell, resource: "git -C *", effect: allow }
+  - { action: shell, resource: "git add *", effect: allow }
+  - { action: shell, resource: "git blame *", effect: allow }
+  - { action: shell, resource: "git branch *", effect: allow }
+  - { action: shell, resource: "git checkout *", effect: allow }
+  - { action: shell, resource: "git config *", effect: allow }
+  - { action: shell, resource: "git diff *", effect: allow }
+  - { action: shell, resource: "git fetch *", effect: allow }
+  - { action: shell, resource: "git log *", effect: allow }
+  - { action: shell, resource: "git ls-files *", effect: allow }
+  - { action: shell, resource: "git ls-remote *", effect: allow }
+  - { action: shell, resource: "git ls-tree *", effect: allow }
+  - { action: shell, resource: "git merge-base *", effect: allow }
+  - { action: shell, resource: "git mv *", effect: allow }
+  - { action: shell, resource: "git pull *", effect: allow }
+  - { action: shell, resource: "git remote *", effect: allow }
+  - { action: shell, resource: "git rev-parse *", effect: allow }
+  - { action: shell, resource: "git show *", effect: allow }
+  - { action: shell, resource: "git show-ref *", effect: allow }
+  - { action: shell, resource: "git stash *", effect: allow }
+  - { action: shell, resource: "git status *", effect: allow }
+  - { action: shell, resource: "git symbolic-ref *", effect: allow }
+  - { action: shell, resource: "golangci-lint *", effect: allow }
+  - { action: shell, resource: "grep *", effect: allow }
+  - { action: shell, resource: "head *", effect: allow }
+  - { action: shell, resource: "jq *", effect: allow }
+  - { action: shell, resource: "less *", effect: allow }
+  - { action: shell, resource: "ls *", effect: allow }
+  - { action: shell, resource: "openspec *", effect: allow }
+  - { action: shell, resource: "rg *", effect: allow }
+  - { action: shell, resource: "ruff *", effect: allow }
+  - { action: shell, resource: "sort *", effect: allow }
+  - { action: shell, resource: "tail *", effect: allow }
+  - { action: shell, resource: "test *", effect: allow }
+  - { action: shell, resource: "tree *", effect: allow }
+  - { action: shell, resource: "wc *", effect: allow }
+  - { action: shell, resource: "which *", effect: allow }
+  - { action: shell, resource: "yamllint *", effect: allow }
+  # --- ASK: git write operations ---
+  - { action: shell, resource: "git commit *", effect: ask }
+  - { action: shell, resource: "git merge *", effect: ask }
+  - { action: shell, resource: "git push *", effect: ask }
+  - { action: shell, resource: "git rebase *", effect: ask }
+  - { action: shell, resource: "git reset *", effect: ask }
+  - { action: shell, resource: "git tag *", effect: ask }
+  # --- ASK: GitHub write operations ---
+  - { action: shell, resource: "gh api --method DELETE *", effect: ask }
+  - { action: shell, resource: "gh api --method PATCH *", effect: ask }
+  - { action: shell, resource: "gh api --method POST *", effect: ask }
+  - { action: shell, resource: "gh api --method PUT *", effect: ask }
+  - { action: shell, resource: "gh api -X DELETE *", effect: ask }
+  - { action: shell, resource: "gh api -X PATCH *", effect: ask }
+  - { action: shell, resource: "gh api -X POST *", effect: ask }
+  - { action: shell, resource: "gh api -X PUT *", effect: ask }
+  - { action: shell, resource: "gh api graphql *", effect: ask }
+  - { action: shell, resource: "gh issue close *", effect: ask }
+  - { action: shell, resource: "gh issue comment *", effect: ask }
+  - { action: shell, resource: "gh issue create *", effect: ask }
+  - { action: shell, resource: "gh issue edit *", effect: ask }
+  - { action: shell, resource: "gh pr close *", effect: ask }
+  - { action: shell, resource: "gh pr comment *", effect: ask }
+  - { action: shell, resource: "gh pr create *", effect: ask }
+  - { action: shell, resource: "gh pr edit *", effect: ask }
+  - { action: shell, resource: "gh pr merge *", effect: ask }
+  - { action: shell, resource: "gh pr review *", effect: ask }
+  - { action: shell, resource: "gh release create *", effect: ask }
+  # --- ASK: file deletion ---
+  - { action: shell, resource: "rm *", effect: ask }
+  # --- DENY: system administration ---
+  - { action: shell, resource: "at *", effect: deny }
+  - { action: shell, resource: "chown *", effect: deny }
+  - { action: shell, resource: "crontab *", effect: deny }
+  - { action: shell, resource: "dd *", effect: deny }
+  - { action: shell, resource: "dnf *", effect: deny }
+  - { action: shell, resource: "fdisk *", effect: deny }
+  - { action: shell, resource: "firewall-cmd *", effect: deny }
+  - { action: shell, resource: "iptables *", effect: deny }
+  - { action: shell, resource: "kill *", effect: deny }
+  - { action: shell, resource: "killall *", effect: deny }
+  - { action: shell, resource: "mkfs *", effect: deny }
+  - { action: shell, resource: "mount *", effect: deny }
+  - { action: shell, resource: "nft *", effect: deny }
+  - { action: shell, resource: "pkill *", effect: deny }
+  - { action: shell, resource: "reboot", effect: deny }
+  - { action: shell, resource: "shutdown *", effect: deny }
+  - { action: shell, resource: "su *", effect: deny }
+  - { action: shell, resource: "sudo *", effect: deny }
+  - { action: shell, resource: "systemctl *", effect: deny }
+  - { action: shell, resource: "umount *", effect: deny }
+  # --- read default ---
+  - { action: read, resource: "*", effect: allow }
+  # --- DENY: secrets and credentials ---
+  - { action: read, resource: "*.cer", effect: deny }
+  - { action: read, resource: "*.crt", effect: deny }
+  - { action: read, resource: "*.env", effect: deny }
+  - { action: read, resource: "*.env.*", effect: deny }
+  - { action: read, resource: "*.jks", effect: deny }
+  - { action: read, resource: "*.kdbx", effect: deny }
+  - { action: read, resource: "*.key", effect: deny }
+  - { action: read, resource: "*.keystore", effect: deny }
+  - { action: read, resource: "*.p12", effect: deny }
+  - { action: read, resource: "*.p8", effect: deny }
+  - { action: read, resource: "*.pem", effect: deny }
+  - { action: read, resource: "*.pfx", effect: deny }
+  - { action: read, resource: "*.priv*", effect: deny }
+  - { action: read, resource: "*.secret*", effect: deny }
+  - { action: read, resource: "*id_ecdsa*", effect: deny }
+  - { action: read, resource: "*id_ed25519*", effect: deny }
+  - { action: read, resource: "*id_rsa*", effect: deny }
+  - { action: edit, resource: "*", effect: allow }
+  # --- ASK: external directories unless an exception matches ---
+  - { action: external_directory, resource: "*", effect: ask }
+  - { action: external_directory, resource: "/tmp/**", effect: allow }
+  # --- DENY: system paths ---
+  - { action: external_directory, resource: "/boot/**", effect: deny }
+  - { action: external_directory, resource: "/etc/**", effect: deny }
+  - { action: external_directory, resource: "/proc/**", effect: deny }
+  - { action: external_directory, resource: "/sys/**", effect: deny }
+  - { action: external_directory, resource: "/usr/**", effect: deny }
+  - { action: external_directory, resource: "/var/**", effect: deny }
 
-# Merged permission rules: defaults overlaid with user overrides.
-# Used by opencode.json.j2 to render the permission block.
+# Merged permission rules: user overrides follow defaults (last match wins).
+# Used by opencode.json.j2 to render the permissions array.
 _ai_opencode_permissions_merged: >-
-  {{ _ai_opencode_permissions_default
-     | combine(ai_opencode_permissions, recursive=True) }}
+  {{ _ai_opencode_permissions_default + ai_opencode_permissions }}

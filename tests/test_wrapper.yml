@@ -1,0 +1,18 @@
+---
+- name: Render launcher with protected key path before the file exists
+  ansible.builtin.template:
+    src: ../templates/ai_agent_script.sh.j2
+    dest: "{{ ai_user_scripts_dir }}/skynet-with-key"
+    mode: "0750"
+  vars:
+    ai_enmaas_key_file: "~/key's file"
+
+- name: Exercise launcher credential loading with dummy keys
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_facts['python']['executable'] }}"
+      - "{{ playbook_dir }}/check_wrapper.py"
+      - "{{ ai_user_scripts_dir }}/{{ ai_agent_script_name }}"
+      - "{{ ai_user_scripts_dir }}/skynet-with-key"
+      - "{{ ai_user_home_dir }}/key's file"
+  changed_when: false

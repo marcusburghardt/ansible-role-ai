@@ -2,11 +2,22 @@
 # "{{ ai_agent_script_name }}" is a simple script that helps to start AI agents.
 # It is a wrapper around the AI agents and it helps to start the AI agents in a similar way.
 
-{% if 'google-vertex-anthropic' in ai_opencode_providers %}
-export GCP_PROJECT="{{ ai_gcp_project }}"
-export VERTEX_LOCATION="{{ ai_vertex_location }}"
-{% endif %}
-export TRUSTED_GITHUB_ORGS="{{ ai_trusted_github_orgs | join(',') }}"
+{% for name, value in ai_opencode_server_env.items() %}
+export {{ name }}={{ value | quote }}
+{% endfor %}
 
+{% if ai_enmaas_key_file | length > 0 %}
+# Read the protected key at launch time rather than embedding it in this script.
+if ! ENMAAS_KEY="$(cat -- {{ (ai_enmaas_key_file | regex_replace('^~/', ai_user_home_dir + '/')) | quote }})"; then
+    echo "Unable to read the configured EnMaaS key file." >&2
+    exit 1
+fi
+if [[ -z "$ENMAAS_KEY" ]]; then
+    echo "The configured EnMaaS key file is empty." >&2
+    exit 1
+fi
+export ENMAAS_KEY
+
+{% endif %}
 # Start the AI agent
-opencode
+exec opencode "$@"
