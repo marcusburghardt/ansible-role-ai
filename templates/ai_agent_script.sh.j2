@@ -2,7 +2,7 @@
 # "{{ ai_agent_script_name }}" is a simple script that helps to start AI agents.
 # It is a wrapper around the AI agents and it helps to start the AI agents in a similar way.
 
-{% for name, value in ai_opencode_server_env.items() %}
+{% for name, value in _ai_opencode_server_env_merged.items() %}
 export {{ name }}={{ value | quote }}
 {% endfor %}
 

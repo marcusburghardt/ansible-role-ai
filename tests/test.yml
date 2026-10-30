@@ -135,6 +135,7 @@
           - "'export GCP_PROJECT=' not in (_ai_wrapper.content | b64decode)"
           - "'export VERTEX_LOCATION=' not in (_ai_wrapper.content | b64decode)"
           - "'export TRUSTED_GITHUB_ORGS=' in (_ai_wrapper.content | b64decode)"
+          - "'export GOOGLE_APPLICATION_CREDENTIALS=' not in (_ai_wrapper.content | b64decode)"
           - "'exec opencode \"$@\"' in (_ai_wrapper.content | b64decode)"
           - "'opencode2' not in (_ai_wrapper.content | b64decode)"
 
@@ -195,6 +196,83 @@
       ansible.builtin.file:
         path: "{{ _ai_test_bin.path }}"
         state: absent
+
+- name: Verify the shared service restart with vertex credentials
+  hosts: localhost
+  connection: local
+  environment:
+    PATH: "{{ _ai_vertex_bin.path | default('/usr/bin:/bin') }}:{{ lookup('env', 'PATH') }}"
+    FAKE_OPENCODE_MARKER: "{{ _ai_vertex_bin.path | default('/nonexistent') }}/restarted"
+  vars:
+    ai_user_home_dir: "{{ _ai_vertex_home.path }}"
+    ai_vertex_credentials_file: "{{ _ai_vertex_home.path }}/vertex-test-sa.json"
+    ai_tasks:
+      - {enabled: false, name: 'install_dependencies'}
+      - {enabled: false, name: 'install_ollama'}
+      - {enabled: false, name: 'configure_ollama'}
+      - {enabled: false, name: 'install_opencode'}
+      - {enabled: true, name: 'configure_opencode'}
+      - {enabled: false, name: 'cleanup_opencode'}
+      - {enabled: false, name: 'install_openspec'}
+      - {enabled: false, name: 'install_speckit'}
+  pre_tasks:
+    - name: Create isolated test home for the vertex case
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: ansible-role-ai-vertex-
+      register: _ai_vertex_home
+
+    - name: Create isolated test bin directory for the vertex case
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: ansible-role-ai-vertex-bin-
+      register: _ai_vertex_bin
+
+    - name: Install fake opencode binary for the vertex case
+      ansible.builtin.copy:
+        dest: "{{ _ai_vertex_bin.path }}/opencode"
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          case "$1 $2" in
+            "service status") exit 0 ;;
+            "service restart") printf '%s\n%s\n' "${TRUSTED_GITHUB_ORGS:-}" "${GOOGLE_APPLICATION_CREDENTIALS:-}" > "${FAKE_OPENCODE_MARKER}" ;;
+          esac
+  roles:
+    - ansible-role-ai
+  post_tasks:
+    - name: Read the vertex-case wrapper script
+      ansible.builtin.slurp:
+        src: "{{ ai_user_scripts_dir }}/{{ ai_agent_script_name }}"
+      register: _ai_vertex_wrapper
+
+    - name: Verify the vertex-case launcher exports the credentials path
+      ansible.builtin.assert:
+        that:
+          - "'export GOOGLE_APPLICATION_CREDENTIALS=' in (_ai_vertex_wrapper.content | b64decode)"
+          - "'export TRUSTED_GITHUB_ORGS=' in (_ai_vertex_wrapper.content | b64decode)"
+
+    - name: Flush handlers to exercise the vertex credentials restart
+      ansible.builtin.meta: flush_handlers
+
+    - name: Read fake service restart marker for the vertex case
+      ansible.builtin.slurp:
+        src: "{{ _ai_vertex_bin.path }}/restarted"
+      register: _ai_vertex_restart_marker
+
+    - name: Verify the service restarted with consumer entries and credentials path
+      ansible.builtin.assert:
+        that:
+          - "(_ai_vertex_restart_marker.content | b64decode | trim).splitlines()[0] == (ai_trusted_github_orgs | join(','))"
+          - "(_ai_vertex_restart_marker.content | b64decode | trim).splitlines()[1] == ai_vertex_credentials_file"
+
+    - name: Remove vertex-case test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ _ai_vertex_home.path }}"
+        - "{{ _ai_vertex_bin.path }}"
 
 - name: Verify the shared service restart can be disabled
   hosts: localhost

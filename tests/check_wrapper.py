@@ -8,7 +8,7 @@ import tempfile
 
 
 def main() -> None:
-    default_wrapper, configured_wrapper, key_file = map(Path, sys.argv[1:])
+    default_wrapper, configured_wrapper, key_file, vertex_wrapper, vertex_creds = map(Path, sys.argv[1:])
     with tempfile.TemporaryDirectory(prefix="opencode-wrapper-test-") as directory:
         mock_dir = Path(directory)
         marker = mock_dir / "started"
@@ -18,11 +18,12 @@ def main() -> None:
             "import os, pathlib, sys\n"
             "pathlib.Path(os.environ['TEST_MARKER']).touch()\n"
             "assert os.environ.get('ENMAAS_KEY') == os.environ['TEST_EXPECTED_KEY']\n"
+            "assert os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') == os.environ.get('TEST_EXPECTED_VERTEX_CREDS')\n"
             "assert sys.argv[1:] == ['--standalone', 'project with spaces']\n"
         )
         mock.chmod(0o700)
 
-        def launch(wrapper: Path, expected: str, succeeds: bool = True) -> None:
+        def launch(wrapper: Path, expected: str, succeeds: bool = True, expected_creds: str | None = None) -> None:
             marker.unlink(missing_ok=True)
             environment = {
                 **os.environ,
@@ -31,6 +32,9 @@ def main() -> None:
                 "TEST_EXPECTED_KEY": expected,
                 "TEST_MARKER": str(marker),
             }
+            environment.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            if expected_creds is not None:
+                environment["TEST_EXPECTED_VERTEX_CREDS"] = expected_creds
             result = subprocess.run(
                 [str(wrapper), "--standalone", "project with spaces"],
                 env=environment,
@@ -55,7 +59,18 @@ def main() -> None:
         key_file.unlink()
         launch(configured_wrapper, "", succeeds=False)
 
-    print("Wrapper checks passed: inherited key, runtime loading, rotation, arguments, empty/missing file.")
+        # The vertex launcher exports only the expanded credentials path; the
+        # other launchers must not export it at all. The path contains an
+        # apostrophe, so the export is shell-quoted; the launch round-trip
+        # below proves the quoting reproduces the exact path in the environment.
+        for wrapper in (default_wrapper, configured_wrapper):
+            assert "GOOGLE_APPLICATION_CREDENTIALS" not in wrapper.read_text(), "Unexpected credentials export"
+        vertex_text = vertex_wrapper.read_text()
+        assert "export GOOGLE_APPLICATION_CREDENTIALS=" in vertex_text, "Missing credentials export"
+        assert "~/" not in vertex_text, "Credentials path not expanded"
+        launch(vertex_wrapper, "inherited-test-key", expected_creds=str(vertex_creds))
+
+    print("Wrapper checks passed: inherited key, runtime loading, rotation, arguments, empty/missing file, vertex credentials path.")
 
 
 if __name__ == "__main__":

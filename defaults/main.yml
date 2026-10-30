@@ -96,6 +96,14 @@ ai_opencode_agents:
 ai_gcp_project: "your-gcp-project"
 ai_vertex_location: "us-central1"
 
+# Optional protected file containing a GCP service-account JSON key on the
+# target host. When set, its path is exported as GOOGLE_APPLICATION_CREDENTIALS
+# so the OpenCode server authenticates to Google Vertex through Application
+# Default Credentials. A leading ~/ resolves to ai_user_home_dir. Empty
+# preserves the environment (use `gcloud auth application-default login`
+# instead).
+ai_vertex_credentials_file: ""
+
 # Optional protected file containing only the EnMaaS API key on the target host.
 # The launcher reads it at runtime; only its path is rendered by Ansible.
 # A leading ~/ resolves to ai_user_home_dir. Empty preserves the environment.

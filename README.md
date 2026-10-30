@@ -70,6 +70,7 @@ Take a look in the Example Playbook section.
 | `ai_opencode_ollama_models` | See defaults | Ollama models visible in OpenCode (subset of pulled models) |
 | `ai_gcp_project` | `your-gcp-project` | GCP project for Vertex AI (see note below) |
 | `ai_vertex_location` | `us-central1` | GCP Vertex AI region (see note below) |
+| `ai_vertex_credentials_file` | `""` | Protected service-account JSON key file on the target host, exported as `GOOGLE_APPLICATION_CREDENTIALS` (see note below) |
 | `ai_enmaas_key_file` | `""` | Protected API-key file on the target host, readable by the OpenCode server |
 | `ai_opencode_restart_service` | `true` | Restart the shared OpenCode service after the role changes its installation or configuration |
 | `ai_agent_script_name` | `skynet` | Name of the wrapper script in `~/bin/` |
@@ -212,6 +213,22 @@ ai_opencode_agent_explore_model: "anthropic/claude-sonnet-4-5"
 These values are written to `providers.google-vertex.settings.project` and
 `settings.location`. They are unused when `google-vertex` is removed from
 `ai_opencode_providers`. Authenticate through Google Application Default Credentials.
+
+For key-based ADC, store the GCP service-account JSON key in a protected file on each
+target host (for example, `~/.config/vertex/service-account.json` with mode `0600`) and
+set its path. Only the path is rendered by Ansible; the key is never read by the role:
+
+```yaml
+ai_vertex_credentials_file: "{{ ai_user_home_dir }}/.config/vertex/service-account.json"
+```
+
+When set, the role exports `GOOGLE_APPLICATION_CREDENTIALS` with the expanded path on
+both launch paths — the launcher script and the role-driven shared-service restart —
+merged with `ai_opencode_server_env`, so consumer entries are preserved. When left
+empty, the environment is unchanged and authentication falls back to
+`gcloud auth application-default login`. Because the shared service only receives this
+environment through the launcher or a role-driven restart, start OpenCode via the
+launcher script (or let the role restart the service) after changing this variable.
 
 ### EnMaaS API Key File
 

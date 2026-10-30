@@ -12,12 +12,12 @@
   when: ai_opencode_restart_service | bool
 
 # Restarting keeps stored sessions but interrupts in-flight requests.
-# The service inherits ai_opencode_server_env because it is started by the
-# role, not by the launcher, which is why both paths share that dict.
+# The service inherits the merged server environment because it is started by
+# the role, not by the launcher, which is why both paths share that dict.
 - name: "Restart opencode service | Restart the running shared service"
   ansible.builtin.command:
     argv: [opencode, service, restart]
-  environment: "{{ ai_opencode_server_env }}"
+  environment: "{{ _ai_opencode_server_env_merged }}"
   changed_when: true
   listen: restart opencode service
   when:

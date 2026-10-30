@@ -1,3 +1,24 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 # vars file for ansible-role-ai
+
+# Expanded absolute path for the Vertex service-account JSON key. Replaces a
+# leading ~ with ai_user_home_dir and strips any trailing slash. Empty when
+# the user has not set ai_vertex_credentials_file.
+_ai_vertex_credentials_expanded: >-
+  {{ ai_vertex_credentials_file
+     | regex_replace('^~', ai_user_home_dir)
+     | regex_replace('/$', '')
+     if ai_vertex_credentials_file | length > 0
+     else '' }}
+
+# Server environment merged with the Vertex credentials path when configured.
+# Lives in vars/main.yml rather than a task-specific vars file because the
+# service restart handler references it and can be notified by installation
+# changes alone. Consumers may still override ai_opencode_server_env; the
+# merge preserves their entries.
+_ai_opencode_server_env_merged: >-
+  {{ ai_opencode_server_env
+     | combine({'GOOGLE_APPLICATION_CREDENTIALS': _ai_vertex_credentials_expanded})
+     if _ai_vertex_credentials_expanded | length > 0
+     else ai_opencode_server_env }}

@@ -7,6 +7,15 @@
   vars:
     ai_enmaas_key_file: "~/key's file"
 
+- name: Render launcher with vertex credentials path
+  ansible.builtin.template:
+    src: ../templates/ai_agent_script.sh.j2
+    dest: "{{ ai_user_scripts_dir }}/skynet-with-vertex"
+    mode: "0750"
+  vars:
+    ai_enmaas_key_file: ""
+    ai_vertex_credentials_file: "~/.config/vertex test key's.json"
+
 - name: Exercise launcher credential loading with dummy keys
   ansible.builtin.command:
     argv:
@@ -15,4 +24,6 @@
       - "{{ ai_user_scripts_dir }}/{{ ai_agent_script_name }}"
       - "{{ ai_user_scripts_dir }}/skynet-with-key"
       - "{{ ai_user_home_dir }}/key's file"
+      - "{{ ai_user_scripts_dir }}/skynet-with-vertex"
+      - "{{ ai_user_home_dir }}/.config/vertex test key's.json"
   changed_when: false
