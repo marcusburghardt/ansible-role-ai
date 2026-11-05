@@ -22,6 +22,20 @@ Common types:
 - `test`: Adding or correcting tests
 - `chore`: Changes to build process, auxiliary tools, or maintenance
 
+## Line Length
+
+Commit subjects MUST NOT exceed **72 characters**, and SHOULD stay within
+**50 characters** when possible. The body MUST wrap at **72 characters** per
+line.
+
+Do not rely on the terminal, editor, or Git host to wrap messages. Long
+subjects are truncated in `git log --oneline`, dashboards, and generated
+release notes. To check before committing:
+
+```bash
+git log -1 --format=%B | awk 'length > 72 { print "too long: " $0 }'
+```
+
 ## Required Trailers
 
 ### Signed-off-by
