@@ -57,6 +57,13 @@
     mode: "0640"
   notify: restart opencode service
 
+- name: "{{ role_name }} | {{ task.name }} | Deploy agent operating rules instruction file"
+  ansible.builtin.copy:
+    src: agent-operating-rules.md
+    dest: "{{ ai_opencode_config_dir }}/agent-operating-rules.md"
+    mode: "0640"
+  notify: restart opencode service
+
 - name: "{{ role_name }} | {{ task.name }} | Discover built-in command files"
   ansible.builtin.find:
     paths: "{{ role_path }}/files/commands"

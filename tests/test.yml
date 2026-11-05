@@ -74,7 +74,11 @@
           - _ai_config.providers['google-vertex'].settings.location == ai_vertex_location
           - "'google-vertex-anthropic' not in _ai_config.providers"
           - "_ai_config.compaction == {'auto': true, 'keep': {'tokens': 15000}, 'buffer': 10000}"
-          - _ai_config.instructions == ['~/.config/opencode/commit.md', '~/.config/opencode/coding-standards.md', '.specify/memory/constitution.md', 'AGENTS.md']
+          - >-
+            _ai_config.instructions == ['~/.config/opencode/commit.md',
+            '~/.config/opencode/coding-standards.md',
+            '~/.config/opencode/agent-operating-rules.md',
+            '.specify/memory/constitution.md', 'AGENTS.md']
           - >-
             _ai_config.keys() | intersect(['small_model', 'share', 'options', 'disabled_providers',
             'autoupdate', 'permission', 'plugin', 'agent', 'provider']) | length == 0

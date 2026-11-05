@@ -74,7 +74,7 @@ Take a look in the Example Playbook section.
 | `ai_enmaas_key_file` | `""` | Protected API-key file on the target host, readable by the OpenCode server |
 | `ai_opencode_restart_service` | `true` | Restart the shared OpenCode service after the role changes its installation or configuration |
 | `ai_agent_script_name` | `skynet` | Name of the wrapper script in `~/bin/` |
-| `ai_opencode_instructions` | See defaults | Global commit/coding standards, `.specify/memory/constitution.md`, and `AGENTS.md` |
+| `ai_opencode_instructions` | See defaults | Global commit standards, coding standards, agent operating rules, `.specify/memory/constitution.md`, and `AGENTS.md` |
 | `ai_trusted_github_orgs` | `[]` | Trusted GitHub organizations for command security |
 | `ai_opencode_commands_disabled` | `[]` | Built-in command names to skip (without `.md`) |
 | `ai_opencode_commands_custom` | `[]` | Custom commands to deploy (list of `src`/`name` dicts) |
@@ -619,6 +619,21 @@ baseline commit standards for all repositories:
 This file is loaded first in the OpenCode instructions chain, making it the lowest-precedence
 baseline. If a repository provides its own commit rules (via `constitution.md`, `AGENTS.md`,
 `CONTRIBUTING.md`, or similar), those repository-level rules automatically take precedence.
+
+### Agent Operating Rules
+
+The role also deploys `agent-operating-rules.md` to `~/.config/opencode/`. It sets
+session-level guardrails that are independent of any repository:
+
+- **Context budget**: treat ~150k tokens or ~100 assistant turns as a checkpoint,
+  write a handoff, and continue in a fresh session.
+- **Shell hygiene**: always set an explicit `timeout` (120s default, 600s max), and
+  never use `--watch`, `tail -f`, `sleep` polling, or interactive commands.
+- **Delegation**: one bounded unit of work per subagent call; ask for conclusions
+  and file references rather than transcripts.
+
+The file is loaded after `coding-standards.md`, so repository-level rules still win
+on conflicts. Override `ai_opencode_instructions` to reorder or remove it.
 
 Dependencies
 ------------

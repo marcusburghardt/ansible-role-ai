@@ -196,6 +196,7 @@ ai_opencode_compaction:
 ai_opencode_instructions:
   - "~/.config/opencode/commit.md"
   - "~/.config/opencode/coding-standards.md"
+  - "~/.config/opencode/agent-operating-rules.md"
   - ".specify/memory/constitution.md"
   - "AGENTS.md"
 
