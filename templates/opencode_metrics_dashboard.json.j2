@@ -172,7 +172,7 @@
     },
 
     {
-      "id": 103, "title": "Are there sub-agent cost patterns?", "type": "row",
+      "id": 103, "title": "How do sub-agent models compare (cost, time, speed)?", "type": "row",
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
       "collapsed": true,
       "panels": [
@@ -193,6 +193,51 @@
           "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#B877D9" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
           "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
           "targets": [{ "rawQueryText": "SELECT agent, COUNT(DISTINCT session_id) AS invocations FROM sessions WHERE parent_session_id IS NOT NULL GROUP BY agent ORDER BY invocations DESC", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 94, "title": "Sub-Agent Model Leaderboard", "type": "table", "transparent": true,
+          "description": "Cost, wall time, model time, and both speed flavors per sub-agent and model. timed_runs shows how many sessions have complete generation timestamps; blank speed means no coverage.",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 24 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": {}, "overrides": [{ "matcher": { "id": "byName", "options": "cost" }, "properties": [{ "id": "unit", "value": "currencyUSD" }] }, { "matcher": { "id": "byName", "options": "usd_per_1k_out" }, "properties": [{ "id": "unit", "value": "currencyUSD" }] }] },
+          "options": { "showHeader": true, "sortBy": [{ "displayName": "cost", "desc": true }] },
+          "targets": [{ "rawQueryText": "SELECT agent, model, runs, runs_with_generation_time AS timed_runs, ROUND(total_cost_usd, 2) AS cost, ROUND(avg_wall_seconds, 0) AS avg_wall_s, ROUND(avg_generation_seconds, 0) AS avg_gen_s, output_tokens_per_generation_second AS gen_tok_s, output_tokens_per_wall_second AS wall_tok_s, ROUND(usd_per_1k_output_tokens, 3) AS usd_per_1k_out FROM v_agent_performance WHERE session_role = 'subagent' ORDER BY total_cost_usd DESC LIMIT 25", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 95, "title": "Sub-Agent Cost Over Time by Agent", "type": "timeseries", "transparent": true,
+          "description": "Daily sub-agent cost from incremental deltas. Covers live-captured sessions only; backfilled history has no deltas.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "currencyUSD", "custom": { "drawStyle": "line", "fillOpacity": 20, "pointSize": 5, "lineWidth": 2, "lineInterpolation": "smooth" } }, "overrides": [] },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+          "targets": [{ "rawQueryText": "SELECT MIN(d.recorded_at_epoch) AS time, s.agent, ROUND(SUM(d.delta), 4) AS cost FROM v_measurement_deltas d JOIN sessions s ON s.session_id = d.session_id WHERE d.metric_name = 'cost' AND s.parent_session_id IS NOT NULL AND d.recorded_at_epoch >= $__from/1000 AND d.recorded_at_epoch <= $__to/1000 GROUP BY date(d.recorded_at_epoch, 'unixepoch'), s.agent ORDER BY time", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 96, "title": "Sub-Agent Wall Time vs Model Time", "type": "barchart", "transparent": true,
+          "description": "Average wall-clock duration compared with average generation time per sub-agent type. The gap is permission, tool, and idle overhead. Model time is available only for fully timed sessions.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [{ "matcher": { "id": "byName", "options": "avg_wall_s" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#FF7F50" } }] }, { "matcher": { "id": "byName", "options": "avg_model_s" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#73BF69" } }] }] },
+          "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+          "targets": [{ "rawQueryText": "SELECT s.agent, ROUND(AVG(CASE WHEN m.metric_name = 'duration_seconds' THEN m.value END), 0) AS avg_wall_s, ROUND(AVG(CASE WHEN m.metric_name = 'generation_seconds' THEN m.value END), 0) AS avg_model_s FROM sessions s JOIN measurements m ON m.session_id = s.session_id WHERE s.parent_session_id IS NOT NULL AND m.metric_name IN ('duration_seconds', 'generation_seconds') GROUP BY s.agent ORDER BY avg_wall_s DESC LIMIT 15", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 97, "title": "True Model Speed by Sub-Agent Model", "type": "barchart", "transparent": true,
+          "description": "Output tokens per second of generation time (not wall clock) for sub-agent models with at least one fully timed session.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 42 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "#5794F2" }, "custom": { "fillOpacity": 80, "gradientMode": "scheme" } }, "overrides": [] },
+          "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+          "targets": [{ "rawQueryText": "SELECT agent || ' / ' || model AS subagent_model, output_tokens_per_generation_second AS gen_tok_s FROM v_agent_performance WHERE session_role = 'subagent' AND runs_with_generation_time > 0 ORDER BY gen_tok_s DESC LIMIT 15", "queryType": "table", "refId": "A" }]
+        },
+        {
+          "id": 98, "title": "Top Workflows by Total Cost", "type": "table", "transparent": true,
+          "description": "Root session plus every descendant, with the sub-agent share called out separately.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 42 },
+          "datasource": { "type": "frser-sqlite-datasource", "uid": "opencode-metrics-sqlite" },
+          "fieldConfig": { "defaults": {}, "overrides": [{ "matcher": { "id": "byName", "options": "root_cost" }, "properties": [{ "id": "unit", "value": "currencyUSD" }] }, { "matcher": { "id": "byName", "options": "subagent_cost" }, "properties": [{ "id": "unit", "value": "currencyUSD" }] }, { "matcher": { "id": "byName", "options": "total_cost" }, "properties": [{ "id": "unit", "value": "currencyUSD" }] }, { "matcher": { "id": "byName", "options": "subagent_cost_share" }, "properties": [{ "id": "unit", "value": "percentunit" }] }] },
+          "options": { "showHeader": true, "sortBy": [{ "displayName": "total_cost", "desc": true }] },
+          "targets": [{ "rawQueryText": "SELECT substr(root_title, 1, 48) AS workflow, root_agent, subagent_sessions, ROUND(root_cost_usd, 2) AS root_cost, ROUND(subagent_cost_usd, 2) AS subagent_cost, ROUND(total_cost_usd, 2) AS total_cost, subagent_cost_share FROM v_workflow_cost ORDER BY total_cost_usd DESC LIMIT 20", "queryType": "table", "refId": "A" }]
         }
       ]
     },
