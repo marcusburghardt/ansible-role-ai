@@ -18,6 +18,24 @@
 * Use compaction `keep.tokens` and `buffer`, deploy commands to `commands/`, and remove `CLAUDE.md` from default instructions.
 * Disable the metrics plugin by default pending its V2 API migration; retain local development infrastructure and metrics data.
 
+## [0.5.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.4.0...v0.5.0) (2026-11-06)
+
+
+### Features
+
+* add agent operating rules instruction ([155d7b5](https://github.com/marcusburghardt/ansible-role-ai/commit/155d7b566ff0b75504199745b464a4fb745ae7a6))
+* add sub-agent performance dashboard panels ([d1d6ff7](https://github.com/marcusburghardt/ansible-role-ai/commit/d1d6ff79a25777375f2ed9ea521d929432d24e32))
+
+
+### Miscellaneous
+
+* refine permissions based on history assessment ([81f124d](https://github.com/marcusburghardt/ansible-role-ai/commit/81f124dbf2d97a8321c56989e488c3cacfc2ef33))
+
+
+### Documentation
+
+* enforce commit message line length ([8c3d2bb](https://github.com/marcusburghardt/ansible-role-ai/commit/8c3d2bb9d91d3d62d1ade0f56beb588cd0db2667))
+
 ## [0.4.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.3.2...v0.4.0) (2026-10-30)
 
 
