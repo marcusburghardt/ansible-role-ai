@@ -580,7 +580,7 @@ opencode-grafana logs     # Follow container logs
 The container runs an ephemeral Grafana instance pre-configured with:
 
 - The [frser-sqlite-datasource](https://github.com/fr-ser/grafana-sqlite-datasource) plugin
-- A pre-built dashboard with 9 panels (cost, tokens, cache, classification, duration, projects)
+- A pre-built dashboard covering cost, sub-agent cost/time/speed, tokens, cache, classification, duration, and projects
 - Anonymous admin access (no login required -- local-only, single-user tool)
 - A named podman volume for persisting preferences and dashboard modifications across restarts
 
