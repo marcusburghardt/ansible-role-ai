@@ -4,6 +4,7 @@
 
 ### Features
 
+* Enrich portable PR reviews with lifecycle/reviewer-request snapshots, risk-focused analysis, criterion and CI/local coverage tables, attribution of prior findings, and automatic AI-assisted disclosure. Preserve question-tool posting confirmation without typed keywords.
 * Add standalone `/address_feedback` and upgrade `/review_pr` with immutable PR snapshots, evidence-based assessment, human mutation gates, and private resumable journals. Both workflows use an Ansible-managed Python helper and discover project standards without requiring a project workflow framework; repository-required gates remain enforced at their applicable boundaries.
 * Add `ai_enmaas_key_file` to load `ENMAAS_KEY` from a protected target-host file at launcher runtime, with argument forwarding for `skynet --standalone`.
 * Read EnMaaS API keys through OpenCode `{file:...}` provider substitution, so the shared background service authenticates without exported environment variables.

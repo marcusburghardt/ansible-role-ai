@@ -51,6 +51,10 @@ Use the current repository unless the user explicitly selects another repository
    threads with every reply/resolution state, and CI evidence. Any required API
    failure, truncated inventory, or changing context stops ingestion. Report the
    actual error; do not call every 403 a rate limit or process partial inputs.
+   Show the PR's draft/open/closed/merged status, aggregate review decision, and
+   pending review requests from `review_state`. For drafts or closed/merged PRs,
+   confirm the user's intended scope; do not infer that fixes should be pushed or
+   the PR reopened. GitHub's aggregate decision is context, not a finding or consent.
 5. Group by stable thread ID; retain full conversation order, comment IDs,
    edits, suggestion blocks, locations, and `fingerprint`. Skip resolved threads,
    pure approvals, and the PR author's own top-level comments, not their replies
@@ -88,6 +92,8 @@ For every item record:
 - Evidence, confidence, impact, `ACCEPT` or `AUTHOR-DECIDES`, and concrete approach.
   Unverifiable claims or failed analysis remain explicitly inconclusive, not approval.
 - Contradictory advice on overlapping code, and related items to fix together.
+- Original reviewer/discussion URL for existing findings. Preserve attribution and
+  distinguish new feedback from previously raised unresolved concerns.
 
 Validate feedback regardless of reviewer rank. Do not fabricate rules to justify
 preferences or blindly accept bot suggestions. Examine security, architecture,

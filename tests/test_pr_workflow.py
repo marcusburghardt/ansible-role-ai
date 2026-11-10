@@ -61,6 +61,18 @@ def thread() -> dict:
     }
 
 
+def review_state() -> dict:
+    return {
+        "headRefOid": HEAD,
+        "baseRefOid": BASE,
+        "state": "OPEN",
+        "isDraft": False,
+        "merged": False,
+        "reviewDecision": "REVIEW_REQUIRED",
+        "reviewRequests": [],
+    }
+
+
 class FakeGitHub:
     host = "github.com"
     repository = "example/project"
@@ -71,6 +83,7 @@ class FakeGitHub:
         self.after = metadata()
         self.metadata_calls = 0
         self.fail = None
+        self.lifecycle = review_state()
         self.files = [
             {"filename": "main.py", "additions": 2, "deletions": 1, "patch": PATCH}
         ]
@@ -98,6 +111,11 @@ class FakeGitHub:
     def threads(self, number: int) -> list[dict]:
         return [thread()]
 
+    def review_state(self, number: int) -> dict:
+        if self.fail == "lifecycle":
+            raise ValueError("API failure: review lifecycle unavailable")
+        return self.lifecycle
+
 
 class WorkflowTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -119,6 +137,7 @@ class WorkflowTests(unittest.TestCase):
         snapshot = self.snapshot()
         self.assertEqual(snapshot["context"]["head_sha"], HEAD)
         self.assertEqual(snapshot["files"][0]["additions"], 2)
+        self.assertEqual(snapshot["review_state"], review_state())
         self.assertTrue(snapshot["threads"][0]["comments"])
         first_path = snapshot["snapshot_path"]
         for path in (Path(first_path), Path(snapshot["diff_path"])):
@@ -134,7 +153,14 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(workflow.load_snapshot(first_path), snapshot)
 
     def test_capture_rejects_incomplete_data_without_snapshot(self) -> None:
-        for failure in ("files", "reviews", "comments", "check-runs", "statuses"):
+        for failure in (
+            "files",
+            "reviews",
+            "comments",
+            "check-runs",
+            "statuses",
+            "lifecycle",
+        ):
             with self.subTest(failure=failure):
                 self.github = FakeGitHub()
                 self.github.fail = failure
@@ -164,6 +190,15 @@ class WorkflowTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "changed during ingestion"):
             workflow.capture(self.github, 42)
 
+    def test_capture_rejects_lifecycle_from_another_commit(self) -> None:
+        for field in ("headRefOid", "baseRefOid"):
+            with self.subTest(field=field):
+                self.github = FakeGitHub()
+                self.github.lifecycle[field] = "c" * 40
+                with self.assertRaisesRegex(ValueError, "context changed"):
+                    workflow.capture(self.github, 42)
+        self.assertFalse(list(self.root.rglob("snapshot-*.json")))
+
     def test_diff_tampering_is_detected(self) -> None:
         snapshot = self.snapshot()
         Path(snapshot["diff_path"]).write_text("changed")
@@ -187,6 +222,7 @@ class WorkflowTests(unittest.TestCase):
         self.github = FakeGitHub()
         self.github.before["head"]["sha"] = "c" * 40
         self.github.after["head"]["sha"] = "c" * 40
+        self.github.lifecycle["headRefOid"] = "c" * 40
         newer = self.snapshot()
         output = self.cli(
             "state-show",
@@ -308,11 +344,39 @@ class WorkflowTests(unittest.TestCase):
         review = workflow.prepare_review(snapshot, incoming)
         self.assertEqual(review["payload"]["commit_id"], HEAD)
         self.assertEqual(review["payload"]["event"], "REQUEST_CHANGES")
+        self.assertIn(workflow.AI_REVIEW_DISCLOSURE, review["payload"]["body"])
         self.assertFalse(review["already_posted"])
         snapshot["reviews"].append(
             {"body": review["payload"]["body"], "user": {"login": "viewer"}, "id": 9}
         )
         self.assertTrue(workflow.prepare_review(snapshot, incoming)["already_posted"])
+
+    def test_disclosure_normalization_and_legacy_receipts(self) -> None:
+        snapshot = self.snapshot()
+        incoming = {"event": "COMMENT", "body": "Review summary"}
+        prepared = workflow.prepare_review(snapshot, incoming)
+        disclosed = {
+            **incoming,
+            "body": incoming["body"] + "\n\n" + workflow.AI_REVIEW_DISCLOSURE,
+        }
+        repeated = workflow.prepare_review(snapshot, disclosed)
+        self.assertEqual(prepared["payload"], repeated["payload"])
+        self.assertEqual(
+            prepared["payload"]["body"].count(workflow.AI_REVIEW_DISCLOSURE), 1
+        )
+        marker = workflow.action_marker(
+            snapshot, f"review:{HEAD}", json.dumps(incoming, sort_keys=True)
+        )
+        snapshot["reviews"].append(
+            {
+                "body": f"Review summary\n\n{marker}",
+                "user": {"login": "viewer"},
+                "id": 17,
+            }
+        )
+        result = workflow.prepare_review(snapshot, incoming)
+        self.assertTrue(result["already_posted"])
+        self.assertEqual(result["receipts"][0]["id"], 17)
 
     def test_review_rejects_invalid_event_location_and_self_approval(self) -> None:
         snapshot = self.snapshot()
@@ -401,6 +465,68 @@ class WorkflowTests(unittest.TestCase):
 
 
 class GitHubPaginationTests(unittest.TestCase):
+    def test_review_request_pagination_and_lifecycle_fields(self) -> None:
+        user = {"__typename": "User", "login": "reviewer"}
+        team = {
+            "__typename": "Team",
+            "slug": "security",
+            "name": "Security",
+            "organization": {"login": "example"},
+        }
+        bot = {"__typename": "Bot", "login": "reviewer[bot]"}
+        responses = []
+        for reviewers, more in (([user], True), ([team, bot], False)):
+            pull = {
+                **review_state(),
+                "reviewRequests": {
+                    "nodes": [{"requestedReviewer": item} for item in reviewers],
+                    "pageInfo": {"hasNextPage": more, "endCursor": "next"},
+                },
+            }
+            responses.append({"repository": {"pullRequest": pull}})
+        github = object.__new__(workflow.GitHub)
+        github.repository = "example/project"
+        with patch.object(github, "graphql", side_effect=responses) as query:
+            result = github.review_state(42)
+        self.assertEqual(result["reviewRequests"], [user, team, bot])
+        self.assertEqual(result["reviewDecision"], "REVIEW_REQUIRED")
+        self.assertEqual(result["state"], "OPEN")
+        self.assertFalse(result["isDraft"])
+        self.assertFalse(result["merged"])
+        self.assertEqual(query.call_args.args[1]["cursor"], "next")
+        responses[1]["repository"]["pullRequest"]["reviewDecision"] = "APPROVED"
+        with patch.object(github, "graphql", side_effect=responses):
+            with self.assertRaisesRegex(ValueError, "changed during pagination"):
+                github.review_state(42)
+
+    def test_review_lifecycle_preserves_null_decision_and_draft_or_merged_state(
+        self,
+    ) -> None:
+        github = object.__new__(workflow.GitHub)
+        github.repository = "example/project"
+        for state, draft, merged in (("OPEN", True, False), ("MERGED", False, True)):
+            with self.subTest(state=state):
+                pull = {
+                    **review_state(),
+                    "state": state,
+                    "isDraft": draft,
+                    "merged": merged,
+                    "reviewDecision": None,
+                    "reviewRequests": {
+                        "nodes": [],
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    },
+                }
+                with patch.object(
+                    github,
+                    "graphql",
+                    return_value={"repository": {"pullRequest": pull}},
+                ):
+                    result = github.review_state(42)
+                self.assertIsNone(result["reviewDecision"])
+                self.assertEqual(result["isDraft"], draft)
+                self.assertEqual(result["merged"], merged)
+
     def test_rest_pagination_and_no_shell(self) -> None:
         responses = [
             json.dumps(
@@ -488,6 +614,28 @@ class GitHubPaginationTests(unittest.TestCase):
 
 
 class CommandContractTests(unittest.TestCase):
+    def test_review_retains_generic_review_details_and_question_confirmation(
+        self,
+    ) -> None:
+        text = (ROOT / "files/commands/review_pr.md").read_text()
+        for requirement in (
+            "CI/local coverage matrix",
+            "NOT VERIFIED",
+            "PARTIAL",
+            "previously raised by @reviewer",
+            "risk-focused emphasis",
+            "review_state",
+            "AI-assisted disclosure",
+            "question tool",
+            "Post <EVENT> review",
+            "Edit review",
+            "Cancel",
+        ):
+            with self.subTest(requirement=requirement):
+                self.assertIn(requirement, text)
+        self.assertIn("No typed confirmation keyword is required", text)
+        self.assertIn("A failing CI check may still need local reproduction", text)
+
     def test_commands_are_standalone_with_explicit_gates(self) -> None:
         for name in ("review_pr", "address_feedback"):
             text = (ROOT / f"files/commands/{name}.md").read_text()

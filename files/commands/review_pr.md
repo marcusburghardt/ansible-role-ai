@@ -51,6 +51,13 @@ Use the current repository unless the user explicitly supplies another repositor
    replies, check runs, and commit statuses. It binds base/head SHAs and stops on
    truncated file inventory, changing PR context, or failed required API calls.
    Preserve this snapshot/diff; never replace their contents as refs move.
+5. Show `review_state`: draft/open/closed/merged status, GitHub's aggregate
+   `reviewDecision` (null means unavailable/not applicable, not approval), and pending
+   review requests for users, bots, or teams. Aggregate state does not replace your
+   assessment or prove merge eligibility. For a draft or closed/merged PR, explain
+   its status and confirm the intended review scope before continuing; do not reopen
+   the PR, mark it ready, or request reviewers. Default historical reviews to
+   terminal-only reporting unless the user explicitly requests posting.
 
 ## 2. Context and deterministic evidence
 
@@ -58,8 +65,11 @@ Use the current repository unless the user explicitly supplies another repositor
   and any constitution. Discover relevant specifications, designs, and task artifacts
   using project conventions; otherwise use the stated PR intent. Project convention
   and review-writing guidance are optional evidence, not runtime dependencies.
-- Read linked acceptance criteria within the authorized repository scope. Show a
-  short file walkthrough, intended behavior, and requirements addressed or missing.
+- Read linked acceptance criteria within the authorized repository scope. Report
+  each criterion as `COVERED`, `PARTIAL`, or `NOT COVERED`, citing supporting code
+  and tests at the reviewed SHA. If the criterion or required evidence cannot be
+  read, mark it `NOT VERIFIED`, not missing or satisfied. Explain partial/missing
+  coverage and derive any finding severity from its actual impact, not a fixed rule.
 - Inspect code at the frozen head, not an unrelated local checkout. Prefer GitHub
   reads or `git show <sha>:<path>` when available. Never overwrite the worktree.
 - Report checks as pass, fail, pending, skipped, or unavailable. Use the latest
@@ -74,6 +84,12 @@ Use the current repository unless the user explicitly supplies another repositor
   tested commit. Reuse equivalent passing CI only if project policy permits it.
   Record exact commands, commit, and limitations. Passing tools do not replace
   semantic, architecture, security, or test-quality review.
+- Before running checks, show a CI/local coverage matrix: verification goal,
+  project-defined local command, matching CI check, tested SHA/environment, status,
+  and `run / reuse / pending / unavailable` with a reason. Only reuse equivalent
+  evidence for the reviewed commit when project policy allows it; otherwise run
+  the required local validation. A failing CI check may still need local reproduction.
+  Never skip a check merely because another check has a similar name or is failing.
 
 ## 3. Assess
 
@@ -82,27 +98,46 @@ Use the current repository unless the user explicitly supplies another repositor
   cause, observable consequence, and evidence for each finding. Distinguish
   demonstrated defects from stylistic preferences; use project severity definitions
   if supplied, otherwise CRITICAL/HIGH/MEDIUM/LOW with an explicit rationale.
+- Use file purpose to add risk-focused emphasis, without limiting other checks:
+
+  | File purpose | Additional emphasis |
+  |---|---|
+  | Tests and fixtures | Assertion strength, edge cases, mock isolation, realistic inputs |
+  | CLI and command handling | Flag validation, help text, error messages, exit behavior |
+  | API, authentication, middleware | Authorization, validation, injection, sensitive data |
+  | CI, containers, deployment | Least privilege, secret exposure, supply-chain integrity |
+  | Dependencies and lockfiles | Provenance, maintenance, licensing, transitive risk |
+  | Documentation | Accuracy, working examples, links, consistency with behavior |
+
+  Infer purpose from contents and project layout, not just a filename heuristic.
+  Security review applies to every file: consider injection/path traversal,
+  authorization boundaries, races/TOCTOU, secret handling, and unsafe dependencies.
 - Inspect dependency/lockfile and generated changes for relevant risk rather than
   blindly excluding them. Review large diffs in chunks. If scope must be reduced,
   get agreement and clearly mark the result incomplete, never full approval.
 - Deduplicate by location/root cause against prior reviews. Do not repeat resolved
-  feedback without evidence of recurrence. In follow-up reviews, verify all prior
+  feedback without evidence of recurrence. Retain unresolved relevant findings,
+  label them `previously raised by @reviewer`, and link the original discussion
+  instead of presenting them as new or silently suppressing them. Explain any
+  materially different assessment and distinguish new, open, and resolved findings.
+  In follow-up reviews, verify all prior
   blockers and examine the actual delta since the prior reviewed SHA. Broader,
   security-sensitive, ambiguous, or inaccessible deltas require full review.
   Avoid introducing unrelated cosmetic demands on unchanged, already-reviewed code.
 - Direct assessment is the baseline. An independent native subagent is optional
   only if available, permitted, and explicitly authorized; it receives the same
   immutable scope, read-only restrictions, and untrusted-input warning. Its failure
-   is a coverage limitation, not approval. No particular reviewer agent or model is required.
+  is a coverage limitation, not approval. No particular reviewer agent or model is required.
 
 ## 4. Report and save
 
 Show:
 
-1. Repository, PR URL, frozen base/head SHAs, and full/focused review scope.
-2. File walkthrough and linked requirement coverage.
-3. CI/local-check results, causal evidence, and unavailable mandatory gates.
-4. Findings by severity, with concrete fixes; keep preferences advisory.
+1. Repository, PR URL, frozen base/head SHAs, review lifecycle, and full/focused scope.
+2. File walkthrough with risk focus and per-criterion requirement coverage.
+3. CI/local coverage matrix, results, causal evidence, and unavailable mandatory gates.
+4. Findings by severity and new/open/resolved status, with original discussion links
+   for prior findings and concrete fixes; keep preferences advisory.
 5. Verdict: `APPROVE`, `REQUEST_CHANGES`, or `COMMENT`.
 
 Request changes for demonstrated blocking defects. Use COMMENT for incomplete or
@@ -147,9 +182,15 @@ repository. Do not persist human authorization. Preserve prior action receipts.
    ```
 
    If `already_posted` is true, reconcile the returned receipts and do not repost.
-   The stable marker in the body supports recovery; never remove it from the
-   approved payload. Show the EXACT event, full body, inline comments, and target
-   to the user, including the marker, and obtain explicit posting confirmation.
+   The helper adds an AI-assisted disclosure and a stable recovery marker; do not
+   remove either from the approved payload. Show the EXACT event, full body,
+   inline comments, target, disclosure, and marker. Then use the question tool with
+   `Post <EVENT> review`, `Edit review`, and `Cancel` choices. Explain that APPROVE
+   may unblock merging and REQUEST_CHANGES may block it, depending on repository
+   rules and the account's permissions. No typed confirmation keyword is required.
+   If the question tool is unavailable, ask conversationally and wait for explicit
+   confirmation. Editing the payload or changing the event requires a fresh preview
+   and confirmation. Never silently fall back to a different event after API failure.
 5. Immediately before posting run:
 
    ```text

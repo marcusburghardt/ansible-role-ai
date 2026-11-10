@@ -502,8 +502,13 @@ plugins, custom agents, or todo tool. They discover project instructions,
 specifications, conventions, and review-writing guidance when available.
 
 - **Review:** immutable base/head snapshots, CI failure evidence, requirement and
-  file walkthroughs, duplicate-aware findings, focused re-reviews, and optionally
-  a human-confirmed GitHub review with validated inline locations.
+  risk-focused file walkthroughs, per-criterion coverage, a CI/local verification
+  matrix, attributed prior findings, and focused re-reviews. Snapshots retain
+  draft/open/closed/merged status, GitHub's aggregate review decision, and paginated
+  pending user/bot/team review requests. Optional GitHub reviews include an
+  AI-assisted disclosure and validated inline locations. Confirmation uses the
+  question tool with explicit Post/Edit/Cancel choices, never a required typed
+  keyword; conversational confirmation is the fallback when the tool is unavailable.
 - **Feedback:** complete unresolved threads, evidence-based assessment, explicit
   Accept/Modify/Reject/Ask triage, approved local fixes and commits, and separate
   confirmations for pushing, replies, and accepted-thread resolution.
