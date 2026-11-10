@@ -55,11 +55,18 @@ cmd_start() {
     podman rm -f "${CONTAINER_NAME}" &>/dev/null || true
 
     echo "Starting Grafana container..."
+    # The metrics directory must be mounted read-write. The plugin database
+    # uses SQLite WAL mode, and SQLite needs a writable directory to create
+    # or update the metrics.db-shm shared-memory index even for read-only
+    # connections. A read-only mount makes Grafana fail every query with
+    # "unable to open database file (14)", which the dashboard renders as
+    # "No data". The datasource itself keeps queryOnly: true, so Grafana
+    # still does not write to the database.
     podman run -d \
         --name "${CONTAINER_NAME}" \
         -p "${PORT}:3000" \
         -v "${VOLUME_NAME}:/var/lib/grafana" \
-        -v "${DATA_DIR}:/data/metrics:ro,Z" \
+        -v "${DATA_DIR}:/data/metrics:rw,Z" \
         -v "${PROVISIONING_DIR}/provisioning:/etc/grafana/provisioning:ro,Z" \
         -v "${PROVISIONING_DIR}/dashboards:/var/lib/grafana/dashboards:ro,Z" \
         -e GF_INSTALL_PLUGINS=frser-sqlite-datasource \

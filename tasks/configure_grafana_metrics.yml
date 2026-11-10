@@ -33,6 +33,18 @@
     dest: "{{ ai_grafana_metrics_provisioning_dir }}/dashboards/opencode-metrics.json"
     mode: "0644"
 
+# The opencode-metrics database uses SQLite WAL mode. SQLite needs write
+# access to the containing directory to create or update the -shm shared
+# memory index even for read-only connections. The Grafana container runs
+# as uid 472 with gid 0, which maps to the invoking user's primary group
+# in a rootless podman setup, so group write access is sufficient. Without
+# it every Grafana query fails with "unable to open database file (14)".
+- name: "{{ role_name }} | {{ task.name }} | Ensure metrics data directory is group-writable"
+  ansible.builtin.file:
+    path: "{{ ai_opencode_metrics_data_dir }}"
+    state: directory
+    mode: "0775"
+
 # Deploy helper script
 - name: "{{ role_name }} | {{ task.name }} | Deploy Grafana helper script"
   ansible.builtin.template:

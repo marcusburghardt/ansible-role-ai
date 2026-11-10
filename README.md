@@ -650,6 +650,13 @@ The container runs an ephemeral Grafana instance pre-configured with:
 Port 3033 is used by default to avoid conflicts with other services on port 3000. Override
 with `ai_grafana_metrics_port`.
 
+The metrics directory (`ai_opencode_metrics_data_dir`) is bind-mounted read-write and is
+created with mode `0775`. The metrics database uses SQLite WAL mode, and SQLite needs write
+access to the directory to create or update the `-shm` shared-memory index even for read-only
+connections. A read-only mount causes Grafana to fail every query with
+`unable to open database file (14)`, which appears in the dashboard as "No data". The
+datasource itself sets `queryOnly: true`, so Grafana still does not modify the database.
+
 ### Cleanup
 
 To remove specific commands or skills from the target host, enable the `cleanup_opencode`
