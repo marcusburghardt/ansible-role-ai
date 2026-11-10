@@ -1,0 +1,554 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""Portable PR snapshots and local journals. Never mutates GitHub or Git."""
+
+import argparse
+import fcntl
+import hashlib
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.parse import urlsplit
+
+TIMEOUT_SECONDS = 120
+SCHEMA_VERSION = 1
+MAX_DIFF_BYTES = 20 * 1024 * 1024
+MAX_BODY_BYTES = 60_000
+SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
+REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
+COMMANDS = ("review_pr", "address_feedback")
+DECISIONS = ("accept", "modify", "reject", "ask")
+
+
+def run(arguments: list[str], input_text: str | None = None) -> str:
+    """Execute argument arrays, never a shell or reviewer-provided commands."""
+    result = subprocess.run(
+        arguments,
+        input=input_text,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=TIMEOUT_SECONDS,
+        check=False,
+    )
+    if result.returncode:
+        raise ValueError(f"{arguments[0]} failed: {result.stderr.strip()}")
+    return result.stdout
+
+
+def digest(value: object) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+
+
+def private_directory(path: Path) -> None:
+    """Create private directories without following pre-existing symlinks."""
+    for ancestor in (path, *path.parents):
+        if ancestor.is_symlink():
+            raise ValueError(f"Refusing symlink directory: {ancestor}")
+    if not path.exists():
+        private_directory(path.parent)
+        path.mkdir(mode=0o700, exist_ok=True)
+    if not path.is_dir():
+        raise ValueError(f"Not a directory: {path}")
+
+
+def atomic_write(path: Path, text: str) -> None:
+    private_directory(path.parent)
+    if path.is_symlink():
+        raise ValueError(f"Refusing symlink file: {path}")
+    descriptor, temporary = tempfile.mkstemp(prefix=".pending-", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def write_json(path: Path, value: object) -> None:
+    atomic_write(path, json.dumps(value, indent=2) + "\n")
+
+
+def read_json(path: str | Path) -> dict:
+    value = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("Expected a JSON object")
+    return value
+
+
+class GitHub:
+    """GitHub access through gh's existing host/authentication configuration."""
+
+    def __init__(self, selector: str | None = None):
+        arguments = ["gh", "repo", "view"]
+        if selector:
+            if selector.startswith("-"):
+                raise ValueError("Invalid repository selector")
+            arguments.append(selector)
+        repository = json.loads(run(arguments + ["--json", "nameWithOwner,url"]))
+        self.repository = repository["nameWithOwner"]
+        self.host = urlsplit(repository["url"]).hostname
+        if not REPOSITORY_PATTERN.fullmatch(self.repository) or not self.host:
+            raise ValueError("Invalid repository identity")
+        self.prefix = f"repos/{self.repository}"
+
+    def api(self, endpoint: str, *, pages: bool = False, raw: bool = False) -> object:
+        arguments = ["gh", "api", "--hostname", self.host, endpoint]
+        if pages:
+            arguments += ["--paginate", "--slurp"]
+        if raw:
+            arguments += ["-H", "Accept: application/vnd.github.diff"]
+        output = run(arguments)
+        return output if raw else json.loads(output)
+
+    def listing(self, endpoint: str, key: str | None = None) -> list:
+        pages = self.api(endpoint, pages=True)
+        return [item for page in pages for item in (page[key] if key else page)]
+
+    def graphql(self, query: str, variables: dict) -> dict:
+        response = json.loads(
+            run(
+                ["gh", "api", "graphql", "--hostname", self.host, "--input", "-"],
+                json.dumps({"query": query, "variables": variables}),
+            )
+        )
+        if response.get("errors") or not response.get("data"):
+            raise ValueError(f"GraphQL failed: {response.get('errors', response)}")
+        return response["data"]
+
+    def metadata(self, number: int) -> dict:
+        return self.api(f"{self.prefix}/pulls/{number}")
+
+    def threads(self, number: int) -> list[dict]:
+        owner, name = self.repository.split("/")
+        fields = """
+          nodes { id databaseId body createdAt updatedAt path line originalLine
+            diffHunk authorAssociation author { login __typename }
+            replyTo { id } url }
+          pageInfo { hasNextPage endCursor }
+        """
+        query = """
+          query($owner:String!, $name:String!, $number:Int!, $cursor:String) {
+            repository(owner:$owner, name:$name) { pullRequest(number:$number) {
+              reviewThreads(first:100, after:$cursor) {
+                nodes { id isResolved isOutdated path line originalLine
+                  comments(first:100) { COMMENTS } }
+                pageInfo { hasNextPage endCursor }
+              }
+            } }
+          }
+        """.replace("COMMENTS", fields)
+        comment_query = """
+          query($id:ID!, $cursor:String!) {
+            node(id:$id) { ... on PullRequestReviewThread {
+              comments(first:100, after:$cursor) { COMMENTS }
+            } }
+          }
+        """.replace("COMMENTS", fields)
+        threads = []
+        cursor = None
+        while True:
+            data = self.graphql(
+                query,
+                {
+                    "owner": owner,
+                    "name": name,
+                    "number": number,
+                    "cursor": cursor,
+                },
+            )
+            connection = data["repository"]["pullRequest"]["reviewThreads"]
+            for thread in connection["nodes"]:
+                comments = thread["comments"]
+                nodes = list(comments["nodes"])
+                while comments["pageInfo"]["hasNextPage"]:
+                    comments = self.graphql(
+                        comment_query,
+                        {
+                            "id": thread["id"],
+                            "cursor": comments["pageInfo"]["endCursor"],
+                        },
+                    )["node"]["comments"]
+                    nodes.extend(comments["nodes"])
+                thread["comments"] = nodes
+                thread["fingerprint"] = digest(thread)
+                threads.append(thread)
+            if not connection["pageInfo"]["hasNextPage"]:
+                return threads
+            cursor = connection["pageInfo"]["endCursor"]
+
+
+def context(github: GitHub, metadata: dict) -> dict:
+    result = {
+        "host": github.host,
+        "repository": github.repository,
+        "pr_number": metadata["number"],
+        "pr_url": metadata["html_url"],
+        "base_ref": metadata["base"]["ref"],
+        "base_sha": metadata["base"]["sha"],
+        "head_ref": metadata["head"]["ref"],
+        "head_sha": metadata["head"]["sha"],
+        "head_repository": (metadata["head"].get("repo") or {}).get("full_name"),
+    }
+    if not all(SHA_PATTERN.fullmatch(result[key]) for key in ("base_sha", "head_sha")):
+        raise ValueError("PR base/head must be immutable 40-character commit SHAs")
+    return result
+
+
+def verify_context(expected: dict, actual: dict) -> None:
+    if expected != actual:
+        raise ValueError(
+            "PR context changed; fetch a new snapshot and reassess before mutations"
+        )
+
+
+def snapshot_directory(host: str, repository_id: int, number: int) -> Path:
+    state = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state")
+    if not state.is_absolute():
+        raise ValueError("XDG_STATE_HOME must be absolute")
+    return state / "opencode/pr-workflows" / host / str(repository_id) / f"pr-{number}"
+
+
+def capture(github: GitHub, number: int) -> dict:
+    """All-or-nothing ingestion; failed or changing inputs publish no snapshot."""
+    metadata = github.metadata(number)
+    frozen = context(github, metadata)
+    repository = github.api(github.prefix)
+    files = github.listing(f"{github.prefix}/pulls/{number}/files?per_page=100")
+    # GitHub caps this endpoint at 3,000 files, even when pagination succeeds.
+    if len(files) != metadata["changed_files"]:
+        raise ValueError(
+            "Incomplete changed-file inventory (GitHub may have truncated it)"
+        )
+    reviews = github.listing(f"{github.prefix}/pulls/{number}/reviews?per_page=100")
+    comments = github.listing(f"{github.prefix}/issues/{number}/comments?per_page=100")
+    threads = github.threads(number)
+    checks = github.listing(
+        f"{github.prefix}/commits/{frozen['head_sha']}/check-runs?per_page=100",
+        "check_runs",
+    )
+    statuses = github.listing(
+        f"{github.prefix}/commits/{frozen['head_sha']}/statuses?per_page=100",
+    )
+    diff = github.api(f"{github.prefix}/pulls/{number}", raw=True)
+    if len(diff.encode()) > MAX_DIFF_BYTES:
+        raise ValueError("Diff exceeds 20 MiB; no complete snapshot saved")
+    final_metadata = github.metadata(number)
+    verify_context(frozen, context(github, final_metadata))
+    if metadata["updated_at"] != final_metadata["updated_at"]:
+        raise ValueError("PR changed during ingestion; retry with a fresh snapshot")
+    directory = snapshot_directory(github.host, repository["id"], number)
+    private_directory(directory)
+    for managed in (directory, *list(directory.parents)[:3]):
+        managed.chmod(0o700)
+    identifier = uuid.uuid4().hex
+    diff_path = directory / f"diff-{identifier}.patch"
+    path = directory / f"snapshot-{identifier}.json"
+    value = {
+        "schema_version": SCHEMA_VERSION,
+        "snapshot_path": str(path),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "context": frozen,
+        "repository_id": repository["id"],
+        "author": metadata["user"]["login"],
+        "title": metadata["title"],
+        "body": metadata["body"],
+        "viewer": github.api("user")["login"],
+        "files": files,
+        "reviews": reviews,
+        "issue_comments": comments,
+        "threads": threads,
+        "checks": checks,
+        "statuses": statuses,
+        "diff_path": str(diff_path),
+        "diff_sha256": hashlib.sha256(diff.encode()).hexdigest(),
+    }
+    atomic_write(diff_path, diff)
+    write_json(path, value)
+    return {"snapshot_path": str(path), "diff_path": str(diff_path), "context": frozen}
+
+
+def load_snapshot(path: str) -> dict:
+    snapshot = read_json(path)
+    if snapshot.get("schema_version") != SCHEMA_VERSION:
+        raise ValueError("Unsupported snapshot schema")
+    if Path(snapshot["snapshot_path"]).absolute() != Path(path).absolute():
+        raise ValueError("Snapshot path does not match its recorded identity")
+    if Path(snapshot["diff_path"]).parent != Path(snapshot["snapshot_path"]).parent:
+        raise ValueError("Diff must be beside the immutable snapshot")
+    diff = Path(snapshot["diff_path"]).read_bytes()
+    if hashlib.sha256(diff).hexdigest() != snapshot["diff_sha256"]:
+        raise ValueError("Saved diff changed; capture a new snapshot")
+    return snapshot
+
+
+def journal_path(snapshot: dict, command: str) -> Path:
+    return Path(snapshot["snapshot_path"]).parent / f"{command}.json"
+
+
+def save_journal(snapshot: dict, command: str, incoming: dict) -> dict:
+    """Persist assessments, decisions, and action receipts; never persist consent."""
+    if "confirmation" in incoming or "confirmed" in incoming:
+        raise ValueError("Human mutation consent must not be restored from a journal")
+    if incoming.get("snapshot_path") != snapshot["snapshot_path"]:
+        raise ValueError("Journal must reference this exact snapshot_path")
+    decisions = incoming.get("items", [])
+    if not isinstance(decisions, list):
+        raise ValueError("Journal items must be an array")
+    for item in decisions:
+        if not isinstance(item, dict):
+            raise ValueError("Journal items must be objects")
+        if item.get("decision") is not None and item["decision"] not in DECISIONS:
+            raise ValueError("Invalid triage decision")
+    path = journal_path(snapshot, command)
+    lock_path = path.with_suffix(".lock")
+    private_directory(path.parent)
+    if lock_path.is_symlink():
+        raise ValueError("Refusing symlink journal lock")
+    descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        previous = read_json(path) if path.exists() else {}
+        revision = previous.get("revision", 0)
+        if incoming.get("revision") != revision:
+            raise ValueError("Journal revision changed; reload state before saving")
+        value = {
+            **incoming,
+            "schema_version": SCHEMA_VERSION,
+            "command": command,
+            "context": snapshot["context"],
+            "revision": revision + 1,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        write_json(path, value)
+    return {"journal_path": str(path), "revision": revision + 1}
+
+
+def comment_bodies(snapshot: dict) -> list[dict]:
+    inline = [
+        comment for thread in snapshot["threads"] for comment in thread["comments"]
+    ]
+    return inline + snapshot["issue_comments"] + snapshot["reviews"]
+
+
+def action_marker(snapshot: dict, action: str, body: str) -> str:
+    identity = [
+        snapshot["context"]["host"],
+        snapshot["repository_id"],
+        snapshot["context"]["pr_number"],
+        action,
+        body,
+    ]
+    return f"<!-- pr-workflow:{digest(identity)} -->"
+
+
+def validate_body(body: object) -> None:
+    if not isinstance(body, str) or not body.strip():
+        raise ValueError("Comment body must be a nonempty string")
+    if len(body.encode("utf-8")) > MAX_BODY_BYTES:
+        raise ValueError(
+            "Comment body exceeds 60,000 UTF-8 bytes; summarize before posting"
+        )
+
+
+def prepare_reply(snapshot: dict, body: str, thread_id: str | None) -> dict:
+    validate_body(body)
+    number = snapshot["context"]["pr_number"]
+    prefix = f"repos/{snapshot['context']['repository']}"
+    if thread_id:
+        thread = next((t for t in snapshot["threads"] if t["id"] == thread_id), None)
+        if not thread or thread["isResolved"] or not thread["comments"]:
+            raise ValueError(
+                "Reply target must be an unresolved thread in the snapshot"
+            )
+        comment_id = thread["comments"][0]["databaseId"]
+        if not isinstance(comment_id, int) or comment_id <= 0:
+            raise ValueError("Thread has no valid REST comment ID")
+        endpoint = f"{prefix}/pulls/{number}/comments/{comment_id}/replies"
+    else:
+        endpoint = f"{prefix}/issues/{number}/comments"
+    marker = action_marker(snapshot, thread_id or "general", body)
+    matches = [
+        c
+        for c in comment_bodies(snapshot)
+        if marker in (c.get("body") or "")
+        and (c.get("user") or c.get("author") or {}).get("login") == snapshot["viewer"]
+    ]
+    return {
+        "endpoint": endpoint,
+        "payload": {"body": f"{body.rstrip()}\n\n{marker}"},
+        "already_posted": bool(matches),
+        "receipts": matches,
+    }
+
+
+def added_lines(patch: str) -> set[int]:
+    """Only RIGHT-side added lines are accepted for portable inline reviews."""
+    result = set()
+    line = None
+    for text in patch.splitlines():
+        match = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", text)
+        if match:
+            line = int(match[1])
+        elif line is not None:
+            if text.startswith("+"):
+                result.add(line)
+                line += 1
+            elif text.startswith(" "):
+                line += 1
+    return result
+
+
+def prepare_review(snapshot: dict, incoming: dict) -> dict:
+    event = incoming.get("event")
+    body = incoming.get("body")
+    if event not in ("APPROVE", "REQUEST_CHANGES", "COMMENT"):
+        raise ValueError("Review requires APPROVE, REQUEST_CHANGES, or COMMENT event")
+    validate_body(body)
+    if snapshot["viewer"] == snapshot["author"] and event != "COMMENT":
+        raise ValueError("Authors cannot approve or request changes on their own PR")
+    comments = incoming.get("comments", [])
+    if not isinstance(comments, list) or len(comments) > 15:
+        raise ValueError("At most 15 inline comments; put overflow in the review body")
+    patches = {
+        f["filename"]: added_lines(f.get("patch", "")) for f in snapshot["files"]
+    }
+    normalized = []
+    for comment in comments:
+        if not isinstance(comment, dict):
+            raise ValueError("Inline comments must be objects")
+        validate_body(comment.get("body"))
+        if (
+            comment.get("side") != "RIGHT"
+            or not isinstance(comment.get("path"), str)
+            or type(comment.get("line")) is not int
+            or comment.get("line") not in patches.get(comment.get("path"), set())
+            or set(comment) != {"path", "line", "side", "body"}
+        ):
+            raise ValueError(
+                "Inline comments require path, added RIGHT line, side, body only"
+            )
+        normalized.append(comment)
+    head = snapshot["context"]["head_sha"]
+    marker = action_marker(
+        snapshot, f"review:{head}", json.dumps(incoming, sort_keys=True)
+    )
+    matches = [
+        r
+        for r in snapshot["reviews"]
+        if marker in (r.get("body") or "") and r["user"]["login"] == snapshot["viewer"]
+    ]
+    return {
+        "endpoint": f"repos/{snapshot['context']['repository']}/pulls/"
+        f"{snapshot['context']['pr_number']}/reviews",
+        "payload": {
+            "commit_id": head,
+            "event": event,
+            "body": f"{body.rstrip()}\n\n{marker}",
+            "comments": normalized,
+        },
+        "already_posted": bool(matches),
+        "receipts": matches,
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="operation", required=True)
+    capture_parser = commands.add_parser(
+        "snapshot", help="Fetch complete immutable PR inputs"
+    )
+    capture_parser.add_argument(
+        "--repo", help="OWNER/REPO or HOST/OWNER/REPO; defaults to cwd"
+    )
+    capture_parser.add_argument(
+        "--pr", type=int, help="Defaults to current branch's open PR"
+    )
+    for operation in ("check-head", "state-show", "state-save", "reply", "review"):
+        subparser = commands.add_parser(operation)
+        subparser.add_argument("--snapshot", required=True)
+        if operation.startswith("state-"):
+            subparser.add_argument("--command", choices=COMMANDS, required=True)
+        if operation in ("state-save", "reply", "review"):
+            subparser.add_argument(
+                "--input", required=True, help="Local UTF-8 body or JSON file"
+            )
+        if operation in ("reply", "review"):
+            subparser.add_argument(
+                "--output", required=True, help="Private JSON payload file"
+            )
+        if operation == "reply":
+            subparser.add_argument(
+                "--thread", help="GraphQL thread ID; omit for general reply"
+            )
+    arguments = parser.parse_args()
+    if arguments.operation == "snapshot":
+        if arguments.pr is not None and arguments.pr <= 0:
+            raise ValueError("PR number must be positive")
+        github = GitHub(arguments.repo)
+        number = arguments.pr
+        if number is None:
+            if arguments.repo:
+                raise ValueError("--repo requires --pr; branch detection is local only")
+            number = json.loads(run(["gh", "pr", "view", "--json", "number"]))["number"]
+        result = capture(github, number)
+    else:
+        snapshot = load_snapshot(arguments.snapshot)
+        if arguments.operation == "check-head":
+            frozen = snapshot["context"]
+            github = GitHub(f"{frozen['host']}/{frozen['repository']}")
+            verify_context(
+                frozen, context(github, github.metadata(frozen["pr_number"]))
+            )
+            result = {"unchanged": True, "context": frozen}
+        elif arguments.operation == "state-show":
+            path = journal_path(snapshot, arguments.command)
+            result = (
+                read_json(path)
+                if path.exists()
+                else {
+                    "revision": 0,
+                    "items": [],
+                    "actions": [],
+                }
+            )
+            result["context_matches"] = result.get("context") == snapshot["context"]
+        elif arguments.operation == "state-save":
+            result = save_journal(
+                snapshot, arguments.command, read_json(arguments.input)
+            )
+        else:
+            if arguments.operation == "reply":
+                result = prepare_reply(
+                    snapshot,
+                    Path(arguments.input).read_text(encoding="utf-8"),
+                    arguments.thread,
+                )
+            else:
+                result = prepare_review(snapshot, read_json(arguments.input))
+            write_json(Path(arguments.output), result["payload"])
+            result.pop("payload")
+            result["payload_path"] = arguments.output
+    print(json.dumps(result, indent=2))
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (
+        ValueError,
+        OSError,
+        KeyError,
+        TypeError,
+        subprocess.SubprocessError,
+    ) as error:
+        print(f"pr_workflow: {error}", file=sys.stderr)
+        sys.exit(1)

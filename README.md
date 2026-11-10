@@ -455,7 +455,7 @@ ai_tasks:
 
 ### Trusted GitHub Organizations
 
-The `checkout_pr` and `review_pr` commands include a security guard that verifies the current
+The `checkout_pr`, `review_pr`, and `address_feedback` commands include a security guard that verifies the current
 repository belongs to a trusted GitHub organization before interacting with remote PRs. Set
 `ai_trusted_github_orgs` to your organization's GitHub login(s):
 
@@ -493,6 +493,64 @@ ai_opencode_commands_custom:
 The role will not touch command files it does not manage. If a custom command has the
 same filename as a built-in, the custom version wins (custom deployment runs after
 built-in deployment).
+
+#### Portable PR workflows
+
+`/review_pr [PR_NUMBER]` and `/address_feedback [PR_NUMBER]` are standalone GitHub
+workflows maintained in this role. They require no project workflow framework,
+plugins, custom agents, or todo tool. They discover project instructions,
+specifications, conventions, and review-writing guidance when available.
+
+- **Review:** immutable base/head snapshots, CI failure evidence, requirement and
+  file walkthroughs, duplicate-aware findings, focused re-reviews, and optionally
+  a human-confirmed GitHub review with validated inline locations.
+- **Feedback:** complete unresolved threads, evidence-based assessment, explicit
+  Accept/Modify/Reject/Ask triage, approved local fixes and commits, and separate
+  confirmations for pushing, replies, and accepted-thread resolution.
+- **Policy:** unavailable optional tools do not prevent starting useful work.
+  A repository-mandated review/specification/test gate is still enforced at its actual
+  boundary; the command preserves completed local work and reports what is blocked.
+  Reports describe only the evidence, checks, and actions performed by these workflows.
+
+`configure_opencode` also deploys `files/scripts/pr_workflow.py` to
+`{{ ai_user_scripts_dir }}/pr_workflow.py` (default `~/bin/pr_workflow.py`), mode
+`0750`. The commands look on PATH and then at that default path. Put a custom
+`ai_user_scripts_dir` on PATH when overriding it. The helper requires **Python
+3.10+**, **Git**, and authenticated **GitHub CLI (`gh`)**; it uses only Python's
+standard library on Unix-like hosts. It never modifies Git or GitHub: it fetches
+snapshots, saves journals, and prepares JSON payloads. The agent performs any
+authorized mutations separately. Native OpenCode permissions still apply.
+
+Private snapshots, diffs, reports, and action receipts live outside projects:
+
+```text
+${XDG_STATE_HOME:-~/.local/state}/opencode/pr-workflows/<host>/<repository-id>/pr-<number>/
+```
+
+Managed state directories use `0700`, files use `0600`, and writes are atomic.
+Journals have revision checks to detect concurrent updates. Changed PR heads or
+threads require reassessment; saved progress never restores mutation consent.
+Stable comment markers allow reconciliation after an interrupted POST. This is
+not an exactly-once GitHub transaction: after ambiguous failures the command must
+refresh and reconcile, never blindly retry. No project workflow directory or
+`.gitignore` change is required. State contains PR content; remove it when no
+longer needed according to your retention policy.
+
+Existing `~/.config/opencode/command/address-feedback.md` is intentionally left
+untouched; use the new **underscore** command `/address_feedback`. Compare and
+back up old customizations before manually retiring the legacy command. Also
+check for legacy `command/review_pr.md` definitions before using the upgraded
+`commands/review_pr.md`, to avoid conflicting same-name definitions. Project-local
+commands with the same name override global commands; differently named project
+commands are unaffected. OpenCode reloads commands automatically.
+
+Validation (no GitHub mutations):
+
+```bash
+make test-pr-workflows  # offline unittest suite, fake GitHub inputs
+make test-ansible      # deploy into isolated temporary homes with a fake OpenCode
+make lint              # YAML lint and Ansible syntax check
+```
 
 ### Skills
 

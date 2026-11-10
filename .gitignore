@@ -25,3 +25,6 @@ CLAUDE.md
 
 # Local Ansible role symlinks (development convenience)
 .ansible/roles/
+
+# Python helper/test bytecode
+__pycache__/

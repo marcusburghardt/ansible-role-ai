@@ -128,6 +128,38 @@
           - _ai_command_stats.results | length > 0
           - _ai_command_stats.results | selectattr('stat.exists', 'equalto', true) | list | length == _ai_builtin_commands.files | length
 
+    - name: Check portable PR workflow helper permissions
+      ansible.builtin.stat:
+        path: "{{ ai_user_scripts_dir }}/pr_workflow.py"
+      register: _ai_pr_helper
+
+    - name: Verify the portable PR workflow helper deployment
+      ansible.builtin.assert:
+        that:
+          - _ai_pr_helper.stat.exists
+          - _ai_pr_helper.stat.mode == '0750'
+          - "'address_feedback.md' in (_ai_builtin_commands.files | map(attribute='path') | map('basename') | list)"
+
+    - name: Exercise deployed helper without GitHub access
+      ansible.builtin.command:
+        argv:
+          - "{{ ansible_facts['python']['executable'] }}"
+          - "{{ ai_user_scripts_dir }}/pr_workflow.py"
+          - --help
+      changed_when: false
+
+    - name: Verify helper deployment is idempotent
+      ansible.builtin.copy:
+        src: ../files/scripts/pr_workflow.py
+        dest: "{{ ai_user_scripts_dir }}/pr_workflow.py"
+        mode: "0750"
+      register: _ai_pr_helper_repeat
+
+    - name: Verify repeated helper copy makes no changes
+      ansible.builtin.assert:
+        that:
+          - not _ai_pr_helper_repeat.changed
+
     - name: Read wrapper script
       ansible.builtin.slurp:
         src: "{{ ai_user_scripts_dir }}/{{ ai_agent_script_name }}"

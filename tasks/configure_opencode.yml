@@ -43,6 +43,12 @@
     mode: "0750"
   notify: restart opencode service
 
+- name: "{{ role_name }} | {{ task.name }} | Deploy portable PR workflow helper"
+  ansible.builtin.copy:
+    src: scripts/pr_workflow.py
+    dest: "{{ ai_user_scripts_dir }}/pr_workflow.py"
+    mode: "0750"
+
 - name: "{{ role_name }} | {{ task.name }} | Deploy commit standards instruction file"
   ansible.builtin.copy:
     src: commit.md
