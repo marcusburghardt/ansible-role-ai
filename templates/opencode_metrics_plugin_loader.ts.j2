@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Managed by ansible-role-ai — do not edit manually.
 // This file is regenerated on each playbook run in local mode.
+// OpenCode V2 loads a plugin through its default export, matching the
+// loader written by 'make install' in the opencode-metrics repository.
 import plugin from "{{ _ai_metrics_local_path_expanded }}/dist/index.js";
 
-export const OpenCodeMetrics = plugin;
+export default plugin;

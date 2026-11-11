@@ -27,12 +27,19 @@ When `ai_opencode_metrics_version` is set to `"local"` and
 `ai_opencode_metrics_local_path` is non-empty, the role SHALL write a TypeScript
 loader file at `~/.config/opencode/plugins/opencode-metrics.ts` that imports the
 plugin directly from `<expanded_local_path>/dist/index.js`. The loader file SHALL
+re-export the plugin as its default export, matching the loader written by
+`make install` in the opencode-metrics repository. The loader file SHALL
 contain a header comment indicating it is managed by the role and MUST NOT be edited
 manually.
 
 #### Scenario: Loader file is written in local mode
 - **WHEN** `ai_opencode_metrics_version` is `"local"` and `ai_opencode_metrics_local_path` is `"~/GIT/me/opencode-metrics"`
 - **THEN** the role SHALL create or overwrite `~/.config/opencode/plugins/opencode-metrics.ts` with an import from the expanded absolute path to `dist/index.js`
+
+#### Scenario: Loader file uses the V2 default export
+- **WHEN** the role writes the loader file
+- **THEN** the plugin SHALL be exported as `export default plugin`
+- **AND** the loader SHALL NOT rely on a named export
 
 #### Scenario: Loader file header identifies role as owner
 - **WHEN** the loader file is written by the role
