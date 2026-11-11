@@ -20,6 +20,33 @@
 * Use compaction `keep.tokens` and `buffer`, deploy commands to `commands/`, and remove `CLAUDE.md` from default instructions.
 * Disable the metrics plugin by default pending its V2 API migration; retain local development infrastructure and metrics data.
 
+## [0.6.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.5.0...v0.6.0) (2026-11-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cursor:** the install_cursor task no longer exists. Consumers that list it in ai_tasks must install ansible-role-cursor and rename ai_cursor_version, ai_cursor_install_method, and ai_cursor_appimage_dir to cursor_version, cursor_install_method, and cursor_appimage_dir.
+
+### Features
+
+* add portable PR review workflows ([15effae](https://github.com/marcusburghardt/ansible-role-ai/commit/15effaea97bfc4019b79d86dd1a910e295c199ac))
+* **cursor:** move Cursor IDE installation to its own role ([6a240cb](https://github.com/marcusburghardt/ansible-role-ai/commit/6a240cb57d381c00b97e48da7fe622ab3bd0b3fd))
+* enrich portable PR review context ([e0fc673](https://github.com/marcusburghardt/ansible-role-ai/commit/e0fc673a61b5e77ec048f16d261c21baa92d3587))
+* **grafana:** pin image and plugin versions ([32b5108](https://github.com/marcusburghardt/ansible-role-ai/commit/32b510819dc75d50ddba9aa56a544589d8c403ef))
+* **review-pr:** add value summary and concrete example ([6a9454c](https://github.com/marcusburghardt/ansible-role-ai/commit/6a9454c43048382e645218154235af84ca4a4c51))
+
+
+### Bug Fixes
+
+* **grafana:** mount metrics dir writable for WAL ([60685a2](https://github.com/marcusburghardt/ansible-role-ai/commit/60685a254803af9197622e177a1fe75ba983f149))
+* **grafana:** preserve SQLite sidecar ownership ([f52fc33](https://github.com/marcusburghardt/ansible-role-ai/commit/f52fc336d5a4237cc05f03ed184bd952a38ad10c))
+* **opencode:** export metrics loader by default ([1f85e6e](https://github.com/marcusburghardt/ansible-role-ai/commit/1f85e6e749bbad91ebfa5a3f37bb7a6e3441596a))
+
+
+### Miscellaneous
+
+* **openspec:** archive remove-cursor-installation ([30b5a5a](https://github.com/marcusburghardt/ansible-role-ai/commit/30b5a5ad5f05a04077524bbc7031c3cc5bc14984))
+
 ## [0.5.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.4.0...v0.5.0) (2026-11-06)
 
 
