@@ -651,6 +651,13 @@ connections. A read-only mount causes Grafana to fail every query with
 `unable to open database file (14)`, which appears in the dashboard as "No data". The
 datasource itself sets `queryOnly: true`, so Grafana still does not modify the database.
 
+The launcher uses `--userns=keep-id:uid=472,gid=0` so Grafana-created SQLite WAL/SHM
+files belong to the invoking host user. Without this mapping, rootless Podman creates
+mode `0644` sidecars owned by a subordinate UID, preventing the host metrics collector
+and backfill from writing (`attempt to write a readonly database`). The Grafana named
+volume uses `:U` to migrate its ownership without discarding dashboards or settings;
+host bind mounts are not recursively chowned.
+
 ### Cleanup
 
 To remove specific commands or skills from the target host, enable the `cleanup_opencode`
