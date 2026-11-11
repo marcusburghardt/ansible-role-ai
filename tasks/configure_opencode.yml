@@ -192,7 +192,7 @@
   ansible.builtin.file:
     path: "{{ ai_opencode_metrics_data_dir }}"
     state: directory
-    mode: "0755"
+    mode: "{{ ai_opencode_metrics_data_dir_mode }}"
   when: ai_opencode_metrics_config | length > 0
 
 - name: "{{ role_name }} | {{ task.name }} | Deploy metrics plugin configuration"

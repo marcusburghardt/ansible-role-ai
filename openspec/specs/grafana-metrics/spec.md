@@ -132,3 +132,40 @@ row SHALL be permanently expanded at the top of the dashboard.
   per calendar year
 - **AND** both panels SHALL use delta-based cost aggregation for
   accurate period attribution
+
+### Requirement: Pinned container image and datasource plugin
+The helper script SHALL start Grafana from a pinned image
+(`ai_grafana_metrics_image`) and install a pinned
+`frser-sqlite-datasource` version
+(`ai_grafana_metrics_sqlite_plugin_version`). Floating tags and plugin
+releases MUST NOT change container behavior without an explicit role
+variable update.
+
+#### Scenario: Pinned versions are rendered into the helper script
+- **WHEN** the `configure_grafana_metrics` task deploys the helper script
+- **THEN** the script SHALL start the image from
+  `ai_grafana_metrics_image`
+- **AND** SHALL pass
+  `GF_INSTALL_PLUGINS="<plugin> <version>"` using
+  `ai_grafana_metrics_sqlite_plugin` and
+  `ai_grafana_metrics_sqlite_plugin_version`
+
+### Requirement: Writable metrics mount for SQLite WAL mode
+The metrics data directory SHALL be bind-mounted read-write and SHALL be
+group-writable, because SQLite in WAL mode needs write access to the
+directory to create or update the `-shm` shared-memory index even for
+read-only connections. The datasource SHALL keep `queryOnly: true` so
+Grafana does not modify the database.
+
+#### Scenario: Queries succeed without WAL companion files
+- **GIVEN** the Grafana container is running
+- **AND** the metrics directory is mounted read-write
+- **AND** the metrics database is in WAL mode with no `-wal`/`-shm` files
+- **WHEN** the dashboard queries the database
+- **THEN** the queries SHALL succeed without
+  `unable to open database file (14)`
+
+#### Scenario: Read-only mount is rejected by the role documentation
+- **WHEN** a maintainer reads the role README
+- **THEN** it SHALL explain why the metrics directory must not be
+  mounted read-only

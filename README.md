@@ -63,6 +63,7 @@ Take a look in the Example Playbook section.
 | `ai_opencode_metrics_local_path` | `""` | Path to local opencode-metrics repo (only used when version is `"local"`) |
 | `ai_opencode_metrics_config` | `{}` | Optional metrics plugin config dict (deployed as `config.yaml` when non-empty) |
 | `ai_opencode_metrics_data_dir` | `~/.local/share/opencode-metrics` | Metrics plugin data directory (bind-mounted into Grafana container) |
+| `ai_opencode_metrics_data_dir_mode` | `0775` | Data directory mode; group-writable so the Grafana user can create the SQLite `-shm` index |
 | `ai_opencode_plugins` | `[]` | V2 plugins; metrics excluded pending V2 migration |
 | `ai_opencode_permissions` | `[]` | Ordered permission rules appended to defaults; last match wins |
 | `ai_opencode_compaction` | See defaults | Compaction settings dict (`auto`, `keep.tokens`, `buffer`) |
@@ -89,6 +90,9 @@ Take a look in the Example Playbook section.
 | `ai_grafana_metrics_port` | `3033` | Host port for the Grafana container |
 | `ai_grafana_metrics_container_name` | `opencode-grafana` | Podman container name |
 | `ai_grafana_metrics_script_name` | `opencode-grafana` | Helper script name in `~/bin/` |
+| `ai_grafana_metrics_image` | `docker.io/grafana/grafana:13.3.0` | Pinned Grafana container image |
+| `ai_grafana_metrics_sqlite_plugin` | `frser-sqlite-datasource` | SQLite datasource plugin ID installed at container start |
+| `ai_grafana_metrics_sqlite_plugin_version` | `4.0.6` | Pinned SQLite datasource plugin version |
 | `ai_grafana_metrics_provisioning_dir` | `~/.config/opencode/grafana` | Grafana provisioning and dashboard files directory |
 | `ai_grafana_metrics_monthly_budget` | `300` | Monthly cost budget (USD). Drives color thresholds on all cost KPI panels |
 
@@ -642,7 +646,10 @@ opencode-grafana logs     # Follow container logs
 
 The container runs an ephemeral Grafana instance pre-configured with:
 
-- The [frser-sqlite-datasource](https://github.com/fr-ser/grafana-sqlite-datasource) plugin
+- A pinned Grafana image (`ai_grafana_metrics_image`) and a pinned
+  [frser-sqlite-datasource](https://github.com/fr-ser/grafana-sqlite-datasource)
+  version (`ai_grafana_metrics_sqlite_plugin_version`), so floating tags
+  and plugin releases cannot change behavior silently
 - A pre-built dashboard covering cost, sub-agent cost/time/speed, tokens, cache, classification, duration, and projects
 - Anonymous admin access (no login required -- local-only, single-user tool)
 - A named podman volume for persisting preferences and dashboard modifications across restarts

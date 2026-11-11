@@ -9,7 +9,9 @@ PORT="{{ ai_grafana_metrics_port }}"
 DATA_DIR="{{ ai_opencode_metrics_data_dir }}"
 PROVISIONING_DIR="{{ ai_grafana_metrics_provisioning_dir }}"
 VOLUME_NAME="opencode-grafana-data"
-IMAGE="docker.io/grafana/grafana:latest"
+IMAGE="{{ ai_grafana_metrics_image }}"
+SQLITE_PLUGIN="{{ ai_grafana_metrics_sqlite_plugin }}"
+SQLITE_PLUGIN_VERSION="{{ ai_grafana_metrics_sqlite_plugin_version }}"
 
 usage() {
     echo "Usage: $(basename "$0") {start|stop|status|logs}"
@@ -69,7 +71,7 @@ cmd_start() {
         -v "${DATA_DIR}:/data/metrics:rw,Z" \
         -v "${PROVISIONING_DIR}/provisioning:/etc/grafana/provisioning:ro,Z" \
         -v "${PROVISIONING_DIR}/dashboards:/var/lib/grafana/dashboards:ro,Z" \
-        -e GF_INSTALL_PLUGINS=frser-sqlite-datasource \
+        -e GF_INSTALL_PLUGINS="${SQLITE_PLUGIN} ${SQLITE_PLUGIN_VERSION}" \
         -e GF_SECURITY_ADMIN_PASSWORD=admin \
         -e GF_AUTH_ANONYMOUS_ENABLED=true \
         -e GF_AUTH_ANONYMOUS_ORG_ROLE=Admin \

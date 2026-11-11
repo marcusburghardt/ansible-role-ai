@@ -257,7 +257,16 @@ ai_cursor_appimage_dir: "{{ ai_user_home_dir }}/.local/bin"
 ai_grafana_metrics_port: 3033
 ai_grafana_metrics_container_name: "opencode-grafana"
 ai_grafana_metrics_script_name: "opencode-grafana"
+# Image and datasource plugin are pinned so a floating tag or plugin release
+# cannot change behavior (or break queries) without an explicit role update.
+ai_grafana_metrics_image: "docker.io/grafana/grafana:13.3.0"
+ai_grafana_metrics_sqlite_plugin: "frser-sqlite-datasource"
+ai_grafana_metrics_sqlite_plugin_version: "4.0.6"
 ai_opencode_metrics_data_dir: "{{ ai_user_home_dir }}/.local/share/opencode-metrics"
+# Group-writable so the Grafana container user can create the SQLite -shm
+# index (WAL mode). In rootless podman the container's gid 0 maps to the
+# invoking user's primary group.
+ai_opencode_metrics_data_dir_mode: "0775"
 ai_grafana_metrics_provisioning_dir: "{{ ai_opencode_config_dir }}/grafana"
 # Monthly cost budget in USD. Drives color thresholds across all cost KPI
 # panels (daily, weekly, monthly, yearly). Change this single value and

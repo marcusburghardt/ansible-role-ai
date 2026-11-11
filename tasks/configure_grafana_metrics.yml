@@ -43,7 +43,7 @@
   ansible.builtin.file:
     path: "{{ ai_opencode_metrics_data_dir }}"
     state: directory
-    mode: "0775"
+    mode: "{{ ai_opencode_metrics_data_dir_mode }}"
 
 # Deploy helper script
 - name: "{{ role_name }} | {{ task.name }} | Deploy Grafana helper script"
