@@ -139,6 +139,24 @@ Show:
 4. Findings by severity and new/open/resolved status, with original discussion links
    for prior findings and concrete fixes; keep preferences advisory.
 5. Verdict: `APPROVE`, `REQUEST_CHANGES`, or `COMMENT`.
+6. **Value summary and concrete example** (always, presented last):
+   - **Problem**: what this PR solves in plain language, and who is affected.
+   - **Conclusions**: 2-4 plain-language takeaways, written for a reader who will
+     not read the full review: what now works, what changes for users, caveats,
+     and when the change does not apply. This complements the verdict and findings
+     instead of restating them.
+   - **Concrete example**: one detailed, realistic end-to-end scenario in this
+     project's own domain and vocabulary, using real paths, commands, inputs, and
+     outputs drawn from the reviewed code and the repository's docs, tests, or
+     examples. Walk through the case once, showing before/after behaviour and the
+     outcome the user observes. Prefer a case the project already documents or
+     tests over an invented placeholder.
+
+   Ground every statement in the diff and repository evidence at the frozen head.
+   Label inferences and hypotheticals explicitly. If evidence is too thin for a
+   credible example, say so and give the most plausible scenario marked
+   hypothetical rather than inventing behaviour. Do not run commands just to
+   produce illustrative output, and never imply the example was executed.
 
 Request changes for demonstrated blocking defects. Use COMMENT for incomplete or
 inconclusive assessment; never map unavailable validation to approval. Do not
@@ -154,8 +172,10 @@ python3 <helper> state-save --snapshot <snapshot.json> --command review_pr --inp
 
 Journal input is a JSON object with `snapshot_path`, `revision` (0 initially, then
 the last stored revision), report/findings, coverage, and action receipts. Write it
-privately beside the snapshot. State belongs under XDG_STATE_HOME, outside the
-repository. Do not persist human authorization. Preserve prior action receipts.
+privately beside the snapshot. The report includes the value summary and concrete
+example from item 6, so they persist in the journal. State belongs under
+XDG_STATE_HOME, outside the repository. Do not persist human authorization.
+Preserve prior action receipts.
 
 ## 5. Optional GitHub review
 

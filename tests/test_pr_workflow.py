@@ -626,6 +626,7 @@ class CommandContractTests(unittest.TestCase):
             "risk-focused emphasis",
             "review_state",
             "AI-assisted disclosure",
+            "Value summary and concrete example",
             "question tool",
             "Post <EVENT> review",
             "Edit review",
