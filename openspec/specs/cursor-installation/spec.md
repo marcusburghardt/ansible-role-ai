@@ -1,4 +1,9 @@
-## ADDED Requirements
+## Purpose
+
+Install and update Cursor IDE on Linux across RPM, DEB, and AppImage formats,
+with version-aware idempotency and AppImage desktop integration.
+
+## Requirements
 
 ### Requirement: Install Cursor IDE task is disabled by default
 The `defaults/main.yml` file SHALL include an `install_cursor` entry in the `ai_tasks` list as the last entry with `enabled: false`. This ensures existing role consumers are unaffected and Cursor installation is fully opt-in.

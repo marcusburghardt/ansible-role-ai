@@ -17,7 +17,6 @@ This role will:
 - Auto-discover and deploy built-in OpenCode skills, with support for disabling specific skills and adding custom ones from external paths;
 - Optionally clean up specific commands and skills from the target host;
 - Optionally install system-level dependencies (nodejs, npm, uv) when enabled;
-- Optionally install and update Cursor IDE via RPM, DEB, or AppImage with automatic format detection;
 - Optionally deploy a Grafana metrics dashboard with a helper script for visualizing opencode-metrics data via an ephemeral podman container;
 
 Requirements
@@ -84,9 +83,6 @@ Take a look in the Example Playbook section.
 | `ai_skills_target` | `agent-neutral` | Skills deploy target: `agent-neutral` or `opencode` |
 | `ai_opencode_commands_cleanup` | `[]` | Command filenames to remove (used by `cleanup_opencode`) |
 | `ai_opencode_skills_cleanup` | `[]` | Skill directory names to remove (used by `cleanup_opencode`) |
-| `ai_cursor_version` | `latest` | Cursor version (`latest` or pinned major.minor, e.g., `3.0`) |
-| `ai_cursor_install_method` | `auto` | Install format: `auto`, `rpm`, `deb`, or `appimage` |
-| `ai_cursor_appimage_dir` | `~/.local/bin` | Directory for AppImage binary (AppImage method only) |
 | `ai_grafana_metrics_port` | `3033` | Host port for the Grafana container |
 | `ai_grafana_metrics_container_name` | `opencode-grafana` | Podman container name |
 | `ai_grafana_metrics_script_name` | `opencode-grafana` | Helper script name in `~/bin/` |
@@ -454,7 +450,6 @@ ai_tasks:
   - { enabled: false, name: 'cleanup_opencode' }
   - { enabled: true,  name: 'install_openspec' }
   - { enabled: true,  name: 'install_speckit' }
-  - { enabled: false, name: 'install_cursor' }
 ```
 
 ### Trusted GitHub Organizations
@@ -590,31 +585,23 @@ ai_opencode_skills_custom:
     name: team-review          # optional: override deployed directory name
 ```
 
-### Cursor IDE
+### Migrating to 0.6.0 (Cursor removed)
 
-The `install_cursor` task installs and updates Cursor IDE. It is **disabled by default**
-and must be explicitly enabled in `ai_tasks`. The task supports three installation formats:
+Cursor IDE installation is no longer part of this role. The `install_cursor`
+task moved to the dedicated
+[ansible-role-cursor](https://github.com/marcusburghardt/ansible-role-cursor),
+which follows the same pattern as the VSCode-specific role.
 
-| Method | When used | Requires root? |
-|--------|-----------|----------------|
-| `rpm` | RedHat/Fedora (auto-detected) | Yes |
-| `deb` | Debian/Ubuntu (auto-detected) | Yes |
-| `appimage` | Any Linux distro / fallback | No |
+Upgrading this role does not remove an existing Cursor installation, but a
+playbook that lists `install_cursor` in `ai_tasks` will fail. Migrate by adding
+the dedicated role and renaming the variables:
 
-By default, `ai_cursor_install_method` is `auto`, which selects the format based on the
-target host's OS family. You can override this to force a specific format.
-
-The task is **idempotent**: it queries the Cursor download API to resolve the target version,
-compares it against the currently installed version, and skips download/installation when
-versions match. This avoids downloading ~150MB on every run.
-
-For AppImage installations, the task also deploys a `.desktop` file to
-`~/.local/share/applications/` so Cursor appears in desktop application launchers.
-
-> **Note on Cursor's built-in updater:** Cursor includes an internal auto-updater that may
-> still display update prompts even when the version is managed by Ansible. This is expected
-> behavior -- the system-installed version is the authoritative one, and the internal updater
-> cannot override it for RPM/DEB installations. You can safely dismiss these prompts.
+| Old (`ansible-role-ai`) | New (`ansible-role-cursor`) |
+|-------------------------|-----------------------------|
+| `ai_cursor_version` | `cursor_version` |
+| `ai_cursor_install_method` | `cursor_install_method` |
+| `ai_cursor_appimage_dir` | `cursor_appimage_dir` |
+| `{ enabled: true, name: 'install_cursor' }` | `ansible-role-cursor` in `roles` |
 
 ### Metrics Visualization
 
@@ -744,7 +731,6 @@ Example Playbook
       - { enabled: false, name: 'cleanup_opencode' }
       - { enabled: true,  name: 'install_openspec' }
       - { enabled: true,  name: 'install_speckit' }
-      - { enabled: false, name: 'install_cursor' }
   roles:
     - ansible-role-ai
 ```
@@ -812,49 +798,6 @@ Example Playbook
       - { enabled: false, name: 'cleanup_opencode' }
       - { enabled: true,  name: 'install_openspec' }
       - { enabled: false, name: 'install_speckit' }
-      - { enabled: false, name: 'install_cursor' }
-  roles:
-    - ansible-role-ai
-```
-
-**With Cursor IDE enabled (auto-detects RPM/DEB/AppImage):**
-
-```yaml
----
-- hosts: my_linux
-  vars:
-    ai_tasks:
-      - { enabled: false, name: 'install_dependencies' }
-      - { enabled: true,  name: 'install_ollama' }
-      - { enabled: true,  name: 'configure_ollama' }
-      - { enabled: true,  name: 'install_opencode' }
-      - { enabled: true,  name: 'configure_opencode' }
-      - { enabled: false, name: 'cleanup_opencode' }
-      - { enabled: true,  name: 'install_openspec' }
-      - { enabled: true,  name: 'install_speckit' }
-      - { enabled: true,  name: 'install_cursor' }
-  roles:
-    - ansible-role-ai
-```
-
-**With Cursor IDE pinned to a specific version:**
-
-```yaml
----
-- hosts: my_linux
-  vars:
-    ai_cursor_version: "3.0"
-    ai_cursor_install_method: appimage    # force AppImage regardless of OS
-    ai_tasks:
-      - { enabled: false, name: 'install_dependencies' }
-      - { enabled: true,  name: 'install_ollama' }
-      - { enabled: true,  name: 'configure_ollama' }
-      - { enabled: true,  name: 'install_opencode' }
-      - { enabled: true,  name: 'configure_opencode' }
-      - { enabled: false, name: 'cleanup_opencode' }
-      - { enabled: true,  name: 'install_openspec' }
-      - { enabled: true,  name: 'install_speckit' }
-      - { enabled: true,  name: 'install_cursor' }
   roles:
     - ansible-role-ai
 ```
