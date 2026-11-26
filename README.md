@@ -74,6 +74,7 @@ Take a look in the Example Playbook section.
 | `ai_enmaas_key_file` | `""` | Protected API-key file on the target host, readable by the OpenCode server |
 | `ai_opencode_restart_service` | `true` | Restart the shared OpenCode service after the role changes its installation or configuration |
 | `ai_agent_script_name` | `skynet` | Name of the wrapper script in `~/bin/` |
+| `ai_opencode_server_env` | See defaults | Environment exported by the launcher and passed to the restarted service (default: `TRUSTED_GITHUB_ORGS`); consumer entries are preserved and merged |
 | `ai_opencode_instructions` | See defaults | Global commit standards, coding standards, agent operating rules, `.specify/memory/constitution.md`, and `AGENTS.md` |
 | `ai_trusted_github_orgs` | `[]` | Trusted GitHub organizations for command security |
 | `ai_opencode_commands_disabled` | `[]` | Built-in command names to skip (without `.md`) |

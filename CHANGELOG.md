@@ -10,6 +10,7 @@
 * Read EnMaaS API keys through OpenCode `{file:...}` provider substitution, so the shared background service authenticates without exported environment variables.
 * Restart the shared OpenCode service after installation or configuration changes (`ai_opencode_restart_service`), passing `ai_opencode_server_env` so command security checks keep working. A stopped service stays stopped.
 * Verify the `opencode` launcher after installation, remove dangling symlinks left by earlier installs, and recreate `opencode` from the `opencode2` alias when needed. `@opencode/cli` publishes both names for the same executable.
+* Accept common read-only agent utilities in the default permission list (`base64`, `comm`, `command -v`, `uniq`, `buf lint*`, `git worktree`), and document agent execution and commit-type rules (exit-status capture, assignment-prefix avoidance, `TZ=UTC` parity, and repository-enforced type lists).
 
 ### Breaking Changes
 

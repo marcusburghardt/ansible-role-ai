@@ -29,8 +29,13 @@ _ai_opencode_permissions_default:
   # --- ALLOW: read-only inspection and dev tools ---
   - { action: shell, resource: ".specify/scripts/bash/*", effect: allow }
   - { action: shell, resource: "ansible-lint *", effect: allow }
+  - { action: shell, resource: "base64 *", effect: allow }
+  # Proto lint is read-only; other buf subcommands still ask.
+  - { action: shell, resource: "buf lint*", effect: allow }
   - { action: shell, resource: "cat *", effect: allow }
   - { action: shell, resource: "cd *", effect: allow }
+  - { action: shell, resource: "comm *", effect: allow }
+  - { action: shell, resource: "command -v *", effect: allow }
   - { action: shell, resource: "date *", effect: allow }
   - { action: shell, resource: "diff *", effect: allow }
   - { action: shell, resource: "echo *", effect: allow }
@@ -72,6 +77,7 @@ _ai_opencode_permissions_default:
   - { action: shell, resource: "git stash *", effect: allow }
   - { action: shell, resource: "git status *", effect: allow }
   - { action: shell, resource: "git symbolic-ref *", effect: allow }
+  - { action: shell, resource: "git worktree *", effect: allow }
   - { action: shell, resource: "gofmt *", effect: allow }
   - { action: shell, resource: "golangci-lint *", effect: allow }
   - { action: shell, resource: "grep *", effect: allow }
@@ -89,6 +95,7 @@ _ai_opencode_permissions_default:
   - { action: shell, resource: "tail *", effect: allow }
   - { action: shell, resource: "test *", effect: allow }
   - { action: shell, resource: "tree *", effect: allow }
+  - { action: shell, resource: "uniq *", effect: allow }
   - { action: shell, resource: "wc *", effect: allow }
   - { action: shell, resource: "which *", effect: allow }
   - { action: shell, resource: "yamllint *", effect: allow }

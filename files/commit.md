@@ -31,6 +31,12 @@ Supported types:
 - `style`: formatting or whitespace only
 - `test`: adding or correcting tests
 
+When a repository enforces its own type list (for example `commitlint`
+`type-enum`, release-notes grouping, or `AGENTS.md`), choose a type that
+appears in that list. A type absent from the repository's list is invalid
+there even when release tooling recognizes it. Run the repository's local
+commit linter before committing when one is configured.
+
 A scope is optional and SHOULD be a short noun describing the affected area,
 for example `feat(parser): ...`.
 

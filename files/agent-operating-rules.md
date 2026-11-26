@@ -31,6 +31,15 @@ every task. Repository-level rules still take precedence on conflicts.
   equivalents. They are cheaper and permission-friendly.
 - Keep commands single-purpose. Compound lines (`a && b; c`) are parsed and
   permission-checked per command, so every part can trigger its own prompt.
+- Judge results by exit status: never pipe a command whose outcome you will
+  assess into `head`/`tail`; redirect to a log file and inspect it, or use
+  `set -o pipefail` and check `PIPESTATUS`.
+- Avoid assignment-prefixed compounds (`VAR="$(cmd)" && ...`). They obscure
+  exit status and bypass shell allowlists; use separate calls or
+  `env VAR=value cmd`.
+- Go test suites run under the launcher-provided `TZ=UTC` to match CI. If a
+  failure looks environment-specific, confirm it against the base branch
+  before rerunning the suite.
 
 ## Delegation
 
