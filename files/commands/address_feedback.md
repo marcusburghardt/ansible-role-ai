@@ -151,9 +151,12 @@ and progress never constitute authorization to mutate.
   required by policy; record actual commands and tested commit. Do not install
   dependencies, execute untrusted hooks, or invoke unavailable optional tooling
   without consent. Do not alter thresholds, CI flags, or rules to make checks pass.
-- Group related fixes into logical Conventional Commits. Follow project signing,
-  DCO, attribution, and subject/body-length rules. Use actual model identity if
-  known, otherwise disclose unknown; never require a normalization plugin.
+- Group related fixes into logical Conventional Commits. Follow
+  `~/.config/opencode/commit.md` and `~/.config/opencode/pr.md`, project signing,
+  DCO, attribution, and subject/body-length rules. Validate the message before
+  committing with `python3 ~/bin/commit_lint.py --file <file>`.
+  Use actual model identity if known, otherwise disclose unknown; never require
+  a normalization plugin.
   Stage only related files. Record full commit SHAs and map each addressed item.
   Failed/skipped changes remain unaddressed; do not claim them fixed in replies.
 - Run any mandatory pre-push review gate at its policy boundary. If unavailable,

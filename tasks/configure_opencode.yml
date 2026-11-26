@@ -56,6 +56,13 @@
     mode: "0640"
   notify: restart opencode service
 
+- name: "{{ role_name }} | {{ task.name }} | Deploy PR standards instruction file"
+  ansible.builtin.copy:
+    src: pr.md
+    dest: "{{ ai_opencode_config_dir }}/pr.md"
+    mode: "0640"
+  notify: restart opencode service
+
 - name: "{{ role_name }} | {{ task.name }} | Deploy coding standards instruction file"
   ansible.builtin.copy:
     src: coding-standards.md
