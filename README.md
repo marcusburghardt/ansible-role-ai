@@ -678,18 +678,42 @@ ai_opencode_skills_cleanup:
 The cleanup task is disabled by default and runs after `configure_opencode` in the
 task order. It uses `state: absent`, so missing files are silently skipped.
 
-### Commit Standards
+### Commit and PR Standards
 
-The role deploys a `commit.md` instruction file to `~/.config/opencode/` that establishes
-baseline commit standards for all repositories:
+The role deploys two instruction files to `~/.config/opencode/`:
 
-- **Conventional Commits** message format
+- `commit.md` — baseline commit standards
+- `pr.md` — baseline pull request standards
+
+`commit.md` establishes:
+
+- **Conventional Commits** message format, including the standard type set
 - **Signed-off-by** trailer on all commits (via `git commit -s`)
 - **Assisted-by** trailer on AI-assisted commits (identifying tool and model)
 
-This file is loaded first in the OpenCode instructions chain, making it the lowest-precedence
-baseline. If a repository provides its own commit rules (via `constitution.md`, `AGENTS.md`,
-`CONTRIBUTING.md`, or similar), those repository-level rules automatically take precedence.
+`pr.md` establishes:
+
+- Conventional Commit PR titles, at or below 72 characters
+- Required PR-template discovery and use
+- A concise fallback body when no template exists
+
+Both files are loaded in the OpenCode instructions chain, after nothing and
+before repository-relative paths. They are a **floor**, not a replacement for
+repository policy: a repository may add stricter rules, but silence does not
+opt out of the baseline.
+
+### Git Commit Hook
+
+Commit-message enforcement is owned by `ansible-role-git`, not this role. The
+Git role deploys `~/bin/commit_lint.py` and can install a `commit-msg` hook in
+new and managed repositories. See its `git_hooks_*` variables.
+
+This role keeps only the written policy and the PR workflow validator:
+
+```bash
+python3 ~/bin/commit_lint.py --file .git/COMMIT_EDITMSG
+python3 ~/bin/pr_workflow.py validate-pr-title --title "feat: add cache"
+```
 
 ### Agent Operating Rules
 
