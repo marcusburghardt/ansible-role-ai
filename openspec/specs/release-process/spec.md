@@ -1,4 +1,9 @@
-## ADDED Requirements
+## Purpose
+
+Automate releases from conventional commits using release-please, including
+changelog maintenance, tagging, GitHub Releases, and Galaxy publication.
+
+## Requirements
 
 ### Requirement: Automated release PR from conventional commits
 The repository SHALL have a GitHub Actions workflow (`ci_release.yml`) that triggers on

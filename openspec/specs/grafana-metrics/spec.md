@@ -1,4 +1,9 @@
-## MODIFIED Requirements
+## Purpose
+
+Deploy a pre-built Grafana dashboard and pinned metrics stack for visualizing
+OpenCode usage, costs, and agent behavior from the metrics SQLite database.
+
+## Requirements
 
 ### Requirement: Pre-built dashboard with 9 panels
 The deployed dashboard JSON SHALL contain approximately 50 panels

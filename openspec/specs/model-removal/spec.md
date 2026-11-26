@@ -1,4 +1,9 @@
-## ADDED Requirements
+## Purpose
+
+Validate the curated Ollama model list and remove models marked as removed,
+keeping installed models aligned with the declared list.
+
+## Requirements
 
 ### Requirement: Validate model list for conflicting flags
 The role SHALL validate `ai_ollama_models` at the start of

@@ -1,3 +1,10 @@
+## Purpose
+
+Provide opt-in cleanup tasks that remove retired OpenCode command files and
+skill directories through a dedicated variables file.
+
+## Requirements
+
 ### Requirement: Opt-in cleanup task for commands
 The role SHALL provide a task `cleanup_opencode` (disabled by default in `ai_tasks`) that removes named command files from the command directory. The variable `ai_opencode_commands_cleanup` (default: empty list) SHALL accept command filenames (with `.md` extension). Each listed file SHALL be removed from `{{ ai_opencode_command_dir }}` using `ansible.builtin.file` with `state: absent`.
 

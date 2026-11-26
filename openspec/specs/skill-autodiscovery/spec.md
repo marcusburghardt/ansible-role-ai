@@ -1,3 +1,10 @@
+## Purpose
+
+Auto-discover and deploy built-in and custom OpenCode skills with configurable
+exclusions and deployment targets.
+
+## Requirements
+
 ### Requirement: Auto-discover built-in skills from role files directory
 The role SHALL auto-discover all subdirectories in the role's `files/skills/` directory using `ansible.builtin.find` (with `file_type: directory`) and register the results for deployment. Each discovered directory SHALL be copied recursively to the resolved skills deploy directory. If `files/skills/` does not exist or is empty, no built-in skills SHALL be deployed and no error SHALL occur.
 

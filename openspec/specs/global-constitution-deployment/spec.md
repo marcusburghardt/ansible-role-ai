@@ -1,3 +1,10 @@
+## Purpose
+
+Deploy the global coding standards baseline to the OpenCode configuration
+directory, covering organization-agnostic principles and per-language guidance.
+
+## Requirements
+
 ### Requirement: Deploy global coding standards as a baseline instruction file
 The role SHALL deploy a `coding-standards.md` file to `~/.config/opencode/` containing organization-agnostic coding principles. The file SHALL be deployed using `ansible.builtin.copy` from `files/coding-standards.md` with mode `0640`. The file SHALL be overwritten on every role execution when the `configure_opencode` task is enabled.
 

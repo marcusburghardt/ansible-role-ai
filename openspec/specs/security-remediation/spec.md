@@ -1,3 +1,11 @@
+## Purpose
+
+Provide the security-remediation command for collecting vulnerability and
+code-scanning alerts, grouping fixes, and preparing human-approved remediation
+pull requests.
+
+## Requirements
+
 ### Requirement: Command file follows the established command format
 The command SHALL be deployed as `files/commands/security_remediation.md` with YAML frontmatter containing a `description` field, an H1 title, an Arguments section documenting required and optional parameters, step-by-step Execution Steps, and a Guardrails section constraining agent behavior.
 

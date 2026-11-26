@@ -1,3 +1,10 @@
+## Purpose
+
+Provide the workflow_next command that inspects repository state and recommends
+the next workflow step, plus Next Steps sections in related commands.
+
+## Requirements
+
 ### Requirement: workflow_next command follows established command format
 The command SHALL be deployed as `files/commands/workflow_next.md` with YAML frontmatter containing a `description` field, an H1 title, an Arguments section, step-by-step Execution Steps, and auto-discovered by the existing command deployment mechanism.
 

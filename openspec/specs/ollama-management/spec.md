@@ -1,4 +1,9 @@
-## ADDED Requirements
+## Purpose
+
+Install, configure, and operate Ollama with OS-aware method selection, service
+lifecycle management, and a curated model list.
+
+## Requirements
 
 ### Requirement: Install Ollama with OS-aware method selection
 The role SHALL provide an `install_ollama` sub-task that installs Ollama using a method

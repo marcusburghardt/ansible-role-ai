@@ -1,3 +1,10 @@
+## Purpose
+
+Define the role's task dispatcher, variable conventions, documentation, and
+packaging standards.
+
+## Requirements
+
 ### Requirement: Three-phase task dispatcher in main.yml
 The `tasks/main.yml` file SHALL implement the 3-phase dispatcher pattern: (1) include OS-family-specific variables from `vars/{{ ansible_facts['os_family']|lower }}.yml`, (2) loop over `ai_tasks` and include per-task variables from `vars/{{ task.name }}.yml` for enabled tasks, (3) loop over `ai_tasks` and include task files from `tasks/{{ task.name }}.yml` for enabled tasks.
 
