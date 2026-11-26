@@ -5,11 +5,25 @@ Deploy customizable OpenCode configuration, agent routing, plugins, and compacti
 ## Requirements
 
 ### Requirement: Deploy OpenCode configuration file from template
-The role SHALL deploy the OpenCode configuration file to `ai_opencode_config_file` (default: `~/.config/opencode/opencode.json`) using a Jinja2 template. The template SHALL incorporate variables for model, default agent (`default_agent`), update policy, agent configuration (`ai_opencode_agents`), plugin list (`ai_opencode_plugins`), provider settings (`ai_opencode_providers`), permissions (`ai_opencode_permissions`), compaction settings (`ai_opencode_compaction`), instruction file list (`ai_opencode_instructions`), and watcher ignore patterns. The template SHALL use OpenCode V2 config key names: `plugins` (not `plugin`), `agents` (not `agent`), `providers` (not `provider`), `permissions` (not `permission`), and `update` (not `autoupdate`). The template SHALL NOT include V1-only keys `small_model`, `share`, `options`, or `disabled_providers`.
+The role SHALL deploy the OpenCode configuration file to
+`ai_opencode_config_file` (default: `~/.config/opencode/opencode.json`) using a
+Jinja2 template.
 
 #### Scenario: Configuration file is deployed with default settings
 - **WHEN** the `configure_opencode` task is enabled and runs
 - **THEN** the role creates or overwrites `~/.config/opencode/opencode.json` from the `opencode.json.j2` template with the values from role variables, with file mode `0600`
+
+#### Scenario: Configuration directory is created if missing
+- **WHEN** the parent directory of `ai_opencode_config_file` does not exist
+- **THEN** the role SHALL create the directory structure before deploying the config file
+
+### Requirement: Template incorporates role variables
+The template SHALL incorporate variables for model, default agent
+(`default_agent`), update policy, agent configuration (`ai_opencode_agents`),
+plugin list (`ai_opencode_plugins`), provider settings (`ai_opencode_providers`),
+permissions (`ai_opencode_permissions`), compaction settings
+(`ai_opencode_compaction`), instruction file list (`ai_opencode_instructions`),
+and watcher ignore patterns.
 
 #### Scenario: Configuration file reflects variable overrides
 - **WHEN** the consumer overrides `ai_model` to `anthropic/claude-sonnet-4-5` and `ai_gcp_project` to `my-project`
@@ -22,10 +36,6 @@ The role SHALL deploy the OpenCode configuration file to `ai_opencode_config_fil
 #### Scenario: Instructions list is customizable
 - **WHEN** the consumer overrides `ai_opencode_instructions` to `["CUSTOM.md"]`
 - **THEN** the `instructions` array in the deployed `opencode.json` SHALL contain `["CUSTOM.md"]`
-
-#### Scenario: Configuration directory is created if missing
-- **WHEN** the parent directory of `ai_opencode_config_file` does not exist
-- **THEN** the role SHALL create the directory structure before deploying the config file
 
 #### Scenario: Agent routing block is rendered from variable
 - **WHEN** the role deploys with default `ai_opencode_agents` value and default `ai_model` (`ollama/qwen3:8b`)
@@ -46,6 +56,12 @@ The role SHALL deploy the OpenCode configuration file to `ai_opencode_config_fil
 #### Scenario: Compaction settings reflect user overrides
 - **WHEN** the consumer overrides `ai_opencode_compaction` to `{"auto": false, "keep": {"tokens": 24000}, "buffer": 16000}`
 - **THEN** the deployed `opencode.json` SHALL contain the overridden compaction values
+
+### Requirement: Template uses OpenCode V2 configuration keys
+The template SHALL use OpenCode V2 config key names: `plugins` (not `plugin`),
+`agents` (not `agent`), `providers` (not `provider`), `permissions` (not
+`permission`), and `update` (not `autoupdate`). The template SHALL NOT include
+V1-only keys `small_model`, `share`, `options`, or `disabled_providers`.
 
 #### Scenario: V1-only keys are absent
 - **WHEN** the role deploys the configuration file
@@ -107,11 +123,19 @@ instruction files.
   `~/.config/opencode/commit.md`
 
 ### Requirement: Per-agent model variables for independent routing control
-The role SHALL provide individual default variables for each OpenCode built-in agent's model assignment: `ai_opencode_agent_build_model` (default: `{{ ai_model }}`), `ai_opencode_agent_plan_model` (default: `{{ ai_model }}`), `ai_opencode_agent_explore_model` (default: `{{ ai_model }}`), and `ai_opencode_agent_general_model` (default: `{{ ai_model }}`). These variables SHALL be referenced by the `ai_opencode_agents` dict and SHALL allow consumers to override individual agent models without replacing the entire agent configuration dict.
+The role SHALL provide individual default variables for each OpenCode built-in
+agent's model assignment: `ai_opencode_agent_build_model`,
+`ai_opencode_agent_plan_model`, `ai_opencode_agent_explore_model`, and
+`ai_opencode_agent_general_model`, each defaulting to `{{ ai_model }}`.
 
 #### Scenario: Default agent models resolve to primary model variables
 - **WHEN** the consumer does not override any `ai_opencode_agent_*_model` variables
 - **THEN** all four agent model variables SHALL resolve to the value of `ai_model`
+
+### Requirement: Agent routing references per-agent model variables
+These variables SHALL be referenced by the `ai_opencode_agents` dict and SHALL
+allow consumers to override individual agent models without replacing the entire
+agent configuration dict.
 
 #### Scenario: Individual agent model override does not affect other agents
 - **WHEN** the consumer overrides only `ai_opencode_agent_plan_model` to a Sonnet model

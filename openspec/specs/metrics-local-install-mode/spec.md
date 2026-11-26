@@ -22,15 +22,13 @@ target user's home directory before use.
 - **WHEN** the consumer sets `ai_opencode_metrics_local_path` to `"~/GIT/me/opencode-metrics"`
 - **THEN** the role SHALL expand the path to an absolute path rooted at the target user's home directory (e.g., `/home/user/GIT/me/opencode-metrics`) before writing any file
 
-### Requirement: Local mode activation
+### Requirement: Local mode writes the plugin loader file
 When `ai_opencode_metrics_version` is set to `"local"` and
 `ai_opencode_metrics_local_path` is non-empty, the role SHALL write a TypeScript
 loader file at `~/.config/opencode/plugins/opencode-metrics.ts` that imports the
 plugin directly from `<expanded_local_path>/dist/index.js`. The loader file SHALL
 re-export the plugin as its default export, matching the loader written by
-`make install` in the opencode-metrics repository. The loader file SHALL
-contain a header comment indicating it is managed by the role and MUST NOT be edited
-manually.
+`make install` in the opencode-metrics repository.
 
 #### Scenario: Loader file is written in local mode
 - **WHEN** `ai_opencode_metrics_version` is `"local"` and `ai_opencode_metrics_local_path` is `"~/GIT/me/opencode-metrics"`
@@ -40,6 +38,10 @@ manually.
 - **WHEN** the role writes the loader file
 - **THEN** the plugin SHALL be exported as `export default plugin`
 - **AND** the loader SHALL NOT rely on a named export
+
+### Requirement: Local plugin loader is role-managed
+The loader file SHALL contain a header comment indicating it is managed by the
+role and MUST NOT be edited manually.
 
 #### Scenario: Loader file header identifies role as owner
 - **WHEN** the loader file is written by the role
@@ -70,12 +72,9 @@ mechanisms on each playbook run.
 
 ### Requirement: Report resolved plugin source during playbook run
 The role SHALL emit a debug message during the `configure_opencode` task that
-reports the resolved plugin installation state: the active mode (`npm` or `local`),
-the raw `ai_opencode_metrics_version` value, the resolved source (npm package
-specifier or expanded absolute path to `dist/index.js`), and whether a custom
-`config.yaml` is being deployed. This message SHALL appear before the role takes
-any action on the loader file or `opencode.json`, following the same pattern used
-by `install_ollama` and `install_cursor`.
+reports the resolved plugin installation state before it takes any action on the
+loader file or `opencode.json`. The message SHALL follow the same pattern used by
+`install_ollama` and `install_cursor`.
 
 #### Scenario: NPM mode is reported
 - **WHEN** `ai_opencode_metrics_version` is `"0.3.0"` and the playbook runs

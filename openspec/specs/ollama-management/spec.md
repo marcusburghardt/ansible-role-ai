@@ -6,12 +6,12 @@ lifecycle management, and a curated model list.
 ## Requirements
 
 ### Requirement: Install Ollama with OS-aware method selection
-The role SHALL provide an `install_ollama` sub-task that installs Ollama using a method
-determined by `ai_ollama_install_method` (default: `auto`). When set to `auto`, the method
-SHALL be resolved from `_ollama_method_map` keyed by `ansible_facts['os_family']`, falling
-back to `script` for unmapped OS families. The supported methods are `package` (via
-`ansible.builtin.package`) and `script` (via the official install script). The task SHALL
-be idempotent by checking whether the `ollama` binary is already present on the system.
+The role SHALL provide an `install_ollama` sub-task that installs Ollama using a
+method determined by `ai_ollama_install_method` (default: `auto`). When set to
+`auto`, the method SHALL be resolved from `_ollama_method_map` keyed by
+`ansible_facts['os_family']`, falling back to `script` for unmapped OS families.
+The supported methods are `package` (via `ansible.builtin.package`) and `script`
+(via the official install script).
 
 #### Scenario: Install Ollama via native package on RedHat family
 - **WHEN** the `install_ollama` task is enabled and `ai_ollama_install_method` is `auto`
@@ -35,6 +35,11 @@ be idempotent by checking whether the `ollama` binary is already present on the 
 - **WHEN** the user overrides `ai_ollama_install_method` to `script` on a RedHat-family
   host
 - **THEN** the role SHALL use the install script instead of the native package manager
+
+### Requirement: Ollama installation is idempotent and opt-in
+The task SHALL be idempotent by checking whether the `ollama` binary is already
+present on the system, and SHALL NOT run when the `install_ollama` task entry is
+disabled in `ai_tasks`.
 
 #### Scenario: Skip installation when Ollama is already installed
 - **WHEN** the `install_ollama` task is enabled and the `ollama` binary is already present
