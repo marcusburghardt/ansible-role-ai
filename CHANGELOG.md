@@ -21,6 +21,30 @@
 * Use compaction `keep.tokens` and `buffer`, deploy commands to `commands/`, and remove `CLAUDE.md` from default instructions.
 * Disable the metrics plugin by default pending its V2 API migration; retain local development infrastructure and metrics data.
 
+## [0.7.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.6.0...v0.7.0) (2026-11-26)
+
+
+### Features
+
+* **permissions:** accept read-only agent utilities ([fd1979a](https://github.com/marcusburghardt/ansible-role-ai/commit/fd1979a45db96e80bdd8932686594dacfda583e8))
+* **standards:** enforce commit and PR policy ([575095b](https://github.com/marcusburghardt/ansible-role-ai/commit/575095b7aed9d139146038b4341cb4e7aeb03292))
+
+
+### Bug Fixes
+
+* **openspec:** restore valid structure in archived main specs ([34ad849](https://github.com/marcusburghardt/ansible-role-ai/commit/34ad849881459e73b9f5b4459edfff6310cffe64))
+* **openspec:** split over-length requirements for strict validation ([d8f6b7b](https://github.com/marcusburghardt/ansible-role-ai/commit/d8f6b7b93ef423645043952e4ffa50428c7e5ed0))
+
+
+### Miscellaneous
+
+* **openspec:** archive commit-pr-standards change ([dfb30f9](https://github.com/marcusburghardt/ansible-role-ai/commit/dfb30f95f5ebd592c47788c64032db2c346bba03))
+
+
+### Documentation
+
+* document commit and PR enforcement ([44ebcf5](https://github.com/marcusburghardt/ansible-role-ai/commit/44ebcf569811c357484a1db7d3b69f53b2ce474c))
+
 ## [0.6.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.5.0...v0.6.0) (2026-11-11)
 
 
