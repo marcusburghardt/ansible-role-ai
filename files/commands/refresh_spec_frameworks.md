@@ -39,6 +39,6 @@ Detect which spec-driven development framework is initialized in the current rep
 After refreshing framework artifacts, suggest the most relevant next actions:
 
 - "Run `git diff` to review what changed in the refreshed artifacts."
-- "If changes are meaningful, commit them: `git add .opencode/ && git commit -s -m 'chore: refresh framework artifacts to latest CLI version'`"
+- "If changes are meaningful, commit them: `git add .opencode/ && git commit -s -m 'chore: refresh framework artifacts to latest CLI version' -m 'Assisted-by: <tool> (<model>)'`"
 - "If no changes were made, the artifacts were already up to date."
 - "Run `/workflow_next` to see what else needs attention."

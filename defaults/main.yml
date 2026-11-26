@@ -194,6 +194,7 @@ ai_opencode_compaction:
 # Order matters: later entries override earlier ones on conflicting rules.
 ai_opencode_instructions:
   - "~/.config/opencode/commit.md"
+  - "~/.config/opencode/pr.md"
   - "~/.config/opencode/coding-standards.md"
   - "~/.config/opencode/agent-operating-rules.md"
   - ".specify/memory/constitution.md"

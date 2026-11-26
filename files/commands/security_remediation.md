@@ -283,19 +283,25 @@ After applying changes for a fix group (from Step 8 or Step 9):
    | `go.mod` | `go test ./...` |
    | `pyproject.toml` / `setup.py` | `pytest` or `python -m pytest` |
 
-2. **If validation passes**: Commit the changes:
+2. **If validation passes**: Commit the changes with `git commit -s`, following
+   `~/.config/opencode/commit.md`. Keep the subject at or below 72 characters and
+   include the `Assisted-by: <tool> (<model>)` trailer:
    - For dependency fixes:
      ```
      fix: update <package> to <version> to resolve security vulnerabilities
 
      Resolves Dependabot alerts: #<N>, #<N>, ...
      See: <GitHub advisory URL(s)>
+
+     Assisted-by: <tool> (<model>)
      ```
    - For code scanning fixes:
      ```
      fix: address code scanning findings in <file/area>
 
      Resolves code scanning alerts: #<N>, #<N>, ...
+
+     Assisted-by: <tool> (<model>)
      ```
    Commit messages MUST NOT include CVE exploitation details or proof-of-concept code.
 
@@ -360,14 +366,19 @@ Bumps `lodash` from 4.17.15 to 4.17.21 to resolve open security advisories.
 > 2. **Select specific branches** — choose which branches to push (e.g., "1, 3")
 > 3. **Skip PR creation** — branches remain local for manual review
 
-For each approved PR:
+For each approved PR, validate the title against
+`~/.config/opencode/pr.md`, then push and create it:
+
 ```bash
+python3 ~/bin/pr_workflow.py validate-pr-title --title "<type>(<scope>): <summary>"
 git push -u origin <branch-name>
-gh pr create --title "<title>" --body "$(cat <<'EOF'
+gh pr create --title "<type>(<scope>): <summary>" --body "$(cat <<'EOF'
 <body content>
 EOF
 )"
 ```
+
+Keep the title at or below 72 characters and do not end it with a period.
 
 Report the PR URL after each creation.
 

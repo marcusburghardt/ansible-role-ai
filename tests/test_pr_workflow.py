@@ -654,5 +654,32 @@ class CommandContractTests(unittest.TestCase):
         self.assertIn("separate confirmation", feedback)
 
 
+class PrTitleTests(unittest.TestCase):
+    def test_pr_title_rules(self) -> None:
+        result = workflow.validate_pr_title("fix(cli): reject empty input")
+        self.assertEqual(result["type"], "fix")
+        self.assertEqual(result["scope"], "cli")
+        for title in ("Add empty input check", "fix: reject empty input.", ""):
+            with self.subTest(title=title):
+                with self.assertRaises(ValueError):
+                    workflow.validate_pr_title(title)
+
+    def test_validator_cli(self) -> None:
+        invalid = subprocess.run(
+            [
+                sys.executable,
+                str(HELPER),
+                "validate-pr-title",
+                "--title",
+                "Add a cache",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertNotEqual(invalid.returncode, 0)
+        self.assertIn("must match", invalid.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

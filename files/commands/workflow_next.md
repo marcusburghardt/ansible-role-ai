@@ -43,9 +43,14 @@ git status --porcelain
      git diff
      git status
 
-   Stage and commit:
+   Stage and commit (follow `~/.config/opencode/commit.md`):
      git add -A
-     git commit -s -m "<type>: <description>"
+     git commit -s \
+       -m "<type>(<scope>): <subject>" \
+       -m "<why this change is needed; wrap at 72 columns>" \
+       -m "Assisted-by: <tool> (<model>)"
+
+   Keep the subject at or below 72 characters and do not end it with a period.
 
    Tip: Use `git add -p` for selective staging if changes span multiple concerns.
    ```
