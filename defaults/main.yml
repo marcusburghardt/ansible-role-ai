@@ -160,6 +160,15 @@ ai_opencode_metrics_config: {}
 # Override to add, remove, or replace plugins.
 ai_opencode_plugins: []
 
+# OpenCode MCP servers
+# Dict rendered unchanged as the OpenCode V2 "mcp.servers" block.
+# Each entry is a complete V2 server object (type, command, url, environment,
+# timeout, disabled, ...); the role does not model individual fields, so new
+# OpenCode fields pass through without a role release.
+# Empty by default, which renders "mcp": {"servers": {}} and overwrites any
+# server added by hand with `opencode mcp add`.
+ai_opencode_mcp_servers: {}
+
 # OpenCode configuration
 ai_opencode_config_dir: "{{ ai_user_home_dir }}/.config/opencode"
 ai_opencode_config_file: "{{ ai_opencode_config_dir }}/opencode.json"

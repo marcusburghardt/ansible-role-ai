@@ -74,6 +74,7 @@
           - _ai_config.providers['google-vertex'].settings.location == ai_vertex_location
           - "'google-vertex-anthropic' not in _ai_config.providers"
           - "_ai_config.compaction == {'auto': true, 'keep': {'tokens': 15000}, 'buffer': 10000}"
+          - "_ai_config.mcp == {'servers': {}}"
           - >-
             _ai_config.instructions == ['~/.config/opencode/commit.md',
             '~/.config/opencode/pr.md',
@@ -249,6 +250,14 @@
           - { action: shell, resource: "git push *", effect: allow }
           - { action: shell, resource: "poetry *", effect: allow }
         ai_opencode_plugins: ['example-v2-plugin']
+        ai_opencode_mcp_servers:
+          playwright:
+            type: local
+            command: ['npx', '-y', '@playwright/mcp@latest', '--browser', 'chrome']
+          legacy-server:
+            type: local
+            command: ['legacy-server']
+            disabled: true
         ai_opencode_compaction: { auto: false, keep: { tokens: 24000 }, buffer: 16000 }
         ai_opencode_instructions: ['CUSTOM.md']
 
@@ -266,6 +275,14 @@
           - "_ai_overridden_config.permissions[-2] == {'action': 'shell', 'resource': 'git push *', 'effect': 'allow'}"
           - "_ai_overridden_config.permissions[-1] == {'action': 'shell', 'resource': 'poetry *', 'effect': 'allow'}"
           - _ai_overridden_config.plugins == ['example-v2-plugin']
+          - _ai_overridden_config.mcp.keys() | list == ['servers']
+          - "'playwright' not in _ai_overridden_config.mcp"
+          - _ai_overridden_config.mcp.servers.keys() | sort == ['legacy-server', 'playwright']
+          - _ai_overridden_config.mcp.servers.playwright.type == 'local'
+          - >-
+            _ai_overridden_config.mcp.servers.playwright.command
+            == ['npx', '-y', '@playwright/mcp@latest', '--browser', 'chrome']
+          - _ai_overridden_config.mcp.servers['legacy-server'].disabled == true
           - "_ai_overridden_config.compaction == {'auto': false, 'keep': {'tokens': 24000}, 'buffer': 16000}"
           - _ai_overridden_config.instructions == ['CUSTOM.md']
 

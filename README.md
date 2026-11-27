@@ -66,6 +66,7 @@ Take a look in the Example Playbook section.
 | `ai_opencode_plugins` | `[]` | V2 plugins; metrics excluded pending V2 migration |
 | `ai_opencode_permissions` | `[]` | Ordered permission rules appended to defaults; last match wins |
 | `ai_opencode_compaction` | See defaults | Compaction settings dict (`auto`, `keep.tokens`, `buffer`) |
+| `ai_opencode_mcp_servers` | `{}` | MCP servers rendered as the OpenCode V2 `mcp.servers` block (see below) |
 | `ai_opencode_providers` | See defaults | Provider catalog for OpenCode (rendered into `opencode.json`) |
 | `ai_opencode_ollama_models` | See defaults | Ollama models visible in OpenCode (subset of pulled models) |
 | `ai_gcp_project` | `your-gcp-project` | GCP project for Vertex AI (see note below) |
@@ -403,6 +404,53 @@ ai_opencode_compaction:
 ```
 
 Override to tune for your context window size or disable compaction entirely.
+
+### MCP Servers
+
+The role owns `opencode.json`, so a server added with `opencode mcp add` disappears
+on the next playbook run. Declare servers in `ai_opencode_mcp_servers` instead and
+they stay reviewable, versioned, and idempotent.
+
+Each entry is a complete OpenCode V2 server object, rendered unchanged under
+`mcp.servers`:
+
+```yaml
+ai_opencode_mcp_servers:
+  playwright:
+    type: local
+    command: ["npx", "-y", "@playwright/mcp@latest", "--browser", "chrome"]
+```
+
+The deployed configuration places these entries under `mcp.servers`:
+
+```json
+"mcp": {
+  "servers": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest", "--browser", "chrome"]
+    }
+  }
+}
+```
+
+The `mcp` block is always rendered. The default `{}` produces
+`"mcp": {"servers": {}}`, which also clears any server left behind by a manual
+`opencode mcp add`.
+
+The role does not model individual server fields, so new OpenCode options pass
+through without a role release. See the
+[OpenCode MCP documentation](https://opencode.ai/docs/mcp-servers/) for the
+available fields.
+
+**Scope:** installing a server package (for example, the npm package behind
+`npx -y @playwright/mcp`) and granting MCP tool permissions remain consumer
+responsibilities. Installation belongs in your playbook, and tool permissions
+belong in `ai_opencode_permissions`.
+
+**Secrets:** the configuration file is mode `0600`, but values are stored in
+plaintext. Prefer environment substitution such as `{env:MY_API_KEY}` or a
+reference to a protected file over inline credentials.
 
 ### Migration to OpenCode V2
 

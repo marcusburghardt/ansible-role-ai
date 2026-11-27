@@ -8,6 +8,7 @@
     "permissions": {{ _ai_opencode_permissions_merged | to_nice_json(indent=6) }},
     "compaction": {{ ai_opencode_compaction | to_json }},
     "instructions": {{ ai_opencode_instructions | to_json }},
+    "mcp": { "servers": {{ ai_opencode_mcp_servers | to_json }} },
     "watcher": {
       "ignore": ["node_modules/**", "dist/**", ".git/**", "vendor/**"]
     }
