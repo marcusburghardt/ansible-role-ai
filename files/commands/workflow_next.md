@@ -225,6 +225,25 @@ Suggestions:
 - Explore an idea: `/opsx-explore`
 ```
 
+**Retrospective due check (advisory, does not change the priority ladder):**
+
+Check for a recent retrospective report:
+
+```bash
+ls -t "${XDG_STATE_HOME:-$HOME/.local/state}/opencode/retro/reports/"*.json 2>/dev/null | head -1
+```
+
+If no report exists, or the newest report is older than 30 days, append this
+line to the `Suggestions` list in the displayed clean-state output:
+
+```
+- Review session friction: `/session_retro --days 30`
+```
+
+Do not display the line when a report from the last 30 days exists. This check
+is additive: it never changes which priority matched and never suppresses the
+clean-state result.
+
 ## Output Format
 
 The command SHALL display only **one suggestion** -- the highest-priority match from the checks above. The output follows this structure:

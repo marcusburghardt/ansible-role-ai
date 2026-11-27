@@ -176,6 +176,52 @@
         that:
           - not _ai_pr_helper_repeat.changed
 
+    - name: Check portable session insights helper permissions
+      ansible.builtin.stat:
+        path: "{{ ai_user_scripts_dir }}/session_insights.py"
+      register: _ai_session_helper
+
+    - name: Check deployed session retrospective command
+      ansible.builtin.stat:
+        path: "{{ ai_opencode_command_dir }}/session_retro.md"
+      register: _ai_session_command
+
+    - name: Verify the retrospective command and helper deployment
+      ansible.builtin.assert:
+        that:
+          - _ai_session_helper.stat.exists
+          - _ai_session_helper.stat.mode == '0750'
+          - _ai_session_command.stat.exists
+          - "'session_retro.md' in (_ai_builtin_commands.files | map(attribute='path') | map('basename') | list)"
+
+    - name: Read deployed agent operating rules
+      ansible.builtin.slurp:
+        src: "{{ ai_opencode_config_dir }}/agent-operating-rules.md"
+      register: _ai_operating_rules
+
+    - name: Verify the autonomy contract is deployed
+      ansible.builtin.assert:
+        that:
+          - "'## Autonomy contract' in (_ai_operating_rules.content | b64decode)"
+          - "'Continue without asking for reversible' in (_ai_operating_rules.content | b64decode)"
+          - "'Do not end a turn with a rhetorical confirmation' in (_ai_operating_rules.content | b64decode)"
+          - "'Batch independent decisions into one question' in (_ai_operating_rules.content | b64decode)"
+
+    - name: Collect rendered shell permission rules
+      ansible.builtin.set_fact:
+        _ai_shell_permissions: "{{ _ai_config.permissions | selectattr('action', 'equalto', 'shell') | list }}"
+        _ai_shell_resources: "{{ _ai_config.permissions | selectattr('action', 'equalto', 'shell') | map(attribute='resource') | list }}"
+
+    - name: Verify hardened permission rules and last-match ordering
+      ansible.builtin.assert:
+        that:
+          - "_ai_shell_permissions | selectattr('resource', 'equalto', 'git config *') | selectattr('effect', 'equalto', 'allow') | list | length == 0"
+          - "_ai_shell_permissions | selectattr('resource', 'equalto', 'git config *') | map(attribute='effect') | list == ['ask']"
+          - "_ai_shell_permissions | selectattr('resource', 'equalto', 'git config --get*') | map(attribute='effect') | list == ['allow']"
+          - "_ai_shell_resources.index('git config --get*') < _ai_shell_resources.index('git config *')"
+          - "_ai_shell_resources.index('gh *') < _ai_shell_resources.index('gh api -f *')"
+          - "_ai_shell_resources.index('gh *') < _ai_shell_resources.index('gh api * --input *')"
+
     - name: Read wrapper script
       ansible.builtin.slurp:
         src: "{{ ai_user_scripts_dir }}/{{ ai_agent_script_name }}"
@@ -390,3 +436,60 @@
       loop:
         - "{{ _ai_disabled_home.path }}"
         - "{{ _ai_disabled_bin.path }}"
+
+- name: Verify the retrospective helper survives command disablement
+  hosts: localhost
+  connection: local
+  environment:
+    PATH: "{{ _ai_retro_bin.path | default('/usr/bin:/bin') }}:{{ lookup('env', 'PATH') }}"
+  vars:
+    ai_user_home_dir: "{{ _ai_retro_home.path }}"
+    ai_opencode_restart_service: false
+    ai_opencode_commands_disabled:
+      - session_retro
+    ai_tasks:
+      - {enabled: false, name: 'install_dependencies'}
+      - {enabled: false, name: 'install_ollama'}
+      - {enabled: false, name: 'configure_ollama'}
+      - {enabled: false, name: 'install_opencode'}
+      - {enabled: true, name: 'configure_opencode'}
+      - {enabled: false, name: 'cleanup_opencode'}
+      - {enabled: false, name: 'install_openspec'}
+      - {enabled: false, name: 'install_speckit'}
+  pre_tasks:
+    - name: Create isolated test home for the disabled-command case
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: ansible-role-ai-retro-disabled-
+      register: _ai_retro_home
+
+    - name: Create isolated test bin directory for the disabled-command case
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: ansible-role-ai-retro-disabled-bin-
+      register: _ai_retro_bin
+  roles:
+    - ansible-role-ai
+  post_tasks:
+    - name: Check the disabled command and the helper
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ ai_opencode_command_dir }}/session_retro.md"
+        - "{{ ai_user_scripts_dir }}/session_insights.py"
+      register: _ai_retro_disabled_stats
+
+    - name: Verify the command is absent and the helper remains usable
+      ansible.builtin.assert:
+        that:
+          - not _ai_retro_disabled_stats.results[0].stat.exists
+          - _ai_retro_disabled_stats.results[1].stat.exists
+          - _ai_retro_disabled_stats.results[1].stat.mode == '0750'
+
+    - name: Remove disabled-command test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ _ai_retro_home.path }}"
+        - "{{ _ai_retro_bin.path }}"

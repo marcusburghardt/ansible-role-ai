@@ -128,8 +128,10 @@ python3 <helper> state-save --snapshot <snapshot.json> --command address_feedbac
 
 Show the complete execution plan: decisions, affected files, logical commits,
 required checks, any unavailable mandatory gates, proposed push, reply count,
-and possible thread resolutions. Obtain explicit confirmation before source edits
-or commits. After context compression, re-read this command, load state, refresh
+and possible thread resolutions. Obtain explicit confirmation for the selected
+plan before source edits or commits, then proceed without re-confirming each
+reversible edit inside that approved scope. After context compression, re-read
+this command, load state, refresh
 GitHub, invalidate stale decisions, and obtain fresh confirmation. Cached decisions
 and progress never constitute authorization to mutate.
 

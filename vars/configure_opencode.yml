@@ -60,7 +60,13 @@ _ai_opencode_permissions_default:
   - { action: shell, resource: "git blame *", effect: allow }
   - { action: shell, resource: "git branch *", effect: allow }
   - { action: shell, resource: "git checkout *", effect: allow }
-  - { action: shell, resource: "git config *", effect: allow }
+  # Only read-only git config forms are allowed. Broad `git config *` is
+  # deliberately absent so hooks and signing configuration cannot be changed
+  # without review; the ask rule further down catches every other form.
+  - { action: shell, resource: "git config --get*", effect: allow }
+  - { action: shell, resource: "git config --list*", effect: allow }
+  - { action: shell, resource: "git config -l*", effect: allow }
+  - { action: shell, resource: "git config --show-*", effect: allow }
   - { action: shell, resource: "git diff *", effect: allow }
   - { action: shell, resource: "git fetch *", effect: allow }
   - { action: shell, resource: "git log *", effect: allow }
@@ -100,13 +106,29 @@ _ai_opencode_permissions_default:
   - { action: shell, resource: "which *", effect: allow }
   - { action: shell, resource: "yamllint *", effect: allow }
   # --- ASK: git write operations ---
+  # Last match wins: these rules must stay after the broad allow rules above
+  # so write forms override the more permissive entries.
   - { action: shell, resource: "git commit *", effect: ask }
+  - { action: shell, resource: "git config *", effect: ask }
   - { action: shell, resource: "git merge *", effect: ask }
   - { action: shell, resource: "git push *", effect: ask }
   - { action: shell, resource: "git rebase *", effect: ask }
   - { action: shell, resource: "git reset *", effect: ask }
   - { action: shell, resource: "git tag *", effect: ask }
   # --- ASK: GitHub write operations ---
+  # Last match wins: these implicit-write rules follow `gh *` above so field
+  # flags and --input cannot bypass the intended confirmation gate.
+  - { action: shell, resource: "gh api --input *", effect: ask }
+  - { action: shell, resource: "gh api --raw-field *", effect: ask }
+  - { action: shell, resource: "gh api --field *", effect: ask }
+  - { action: shell, resource: "gh api -F *", effect: ask }
+  - { action: shell, resource: "gh api -f *", effect: ask }
+  # Field flags may follow the path, so cover the positioned forms too.
+  - { action: shell, resource: "gh api * --input *", effect: ask }
+  - { action: shell, resource: "gh api * --raw-field *", effect: ask }
+  - { action: shell, resource: "gh api * --field *", effect: ask }
+  - { action: shell, resource: "gh api * -F *", effect: ask }
+  - { action: shell, resource: "gh api * -f *", effect: ask }
   - { action: shell, resource: "gh api --method DELETE *", effect: ask }
   - { action: shell, resource: "gh api --method PATCH *", effect: ask }
   - { action: shell, resource: "gh api --method POST *", effect: ask }

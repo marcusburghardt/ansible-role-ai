@@ -3,6 +3,21 @@
 These rules keep sessions fast, predictable, and affordable. They apply to
 every task. Repository-level rules still take precedence on conflicts.
 
+## Autonomy contract
+
+- Continue without asking for reversible, in-scope actions already authorized
+  by the task: local reads, edits, formatters, tests, linters, and status
+  checks. Report the result instead of requesting permission.
+- Stop only for irreversible or destructive actions, remote mutations (push,
+  pull request, issue, review, merge, or release), spending, scope or
+  requirement ambiguity, credential handling, or an unavailable mandatory gate.
+- Do not end a turn with a rhetorical confirmation for work already requested.
+  If the task says to do the work, do it and report the outcome.
+- Batch independent decisions into one question with concise options and a
+  recommended default. Do not serialize confirmations one at a time.
+- When blocked, state the blocker, the exact unblocked next action, and the
+  decision needed. A mandatory gate still stops work; explain what it requires.
+
 ## Context budget
 
 - Treat roughly **150,000 tokens of context** or **100 assistant turns** as a
