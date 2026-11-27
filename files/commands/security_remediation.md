@@ -190,7 +190,8 @@ Present the complete remediation plan for human review:
 > 2. **Select specific groups** — choose which groups to apply (e.g., "G1, G3")
 > 3. **Reject all** — stop without making any changes
 
-Wait for the user's choice. Parse their response to determine which groups are approved.
+Ask once with these options and wait for a single choice. Parse the response to
+determine which groups are approved; do not ask again for each group.
 
 Groups marked as `manual-intervention` are always excluded from automated fixing — display them for awareness only.
 

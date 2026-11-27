@@ -58,7 +58,7 @@ Take a look in the Example Playbook section.
 | `ai_opencode_agent_explore_model` | `{{ ai_model }}` | Model for explore agent |
 | `ai_opencode_agent_general_model` | `{{ ai_model }}` | Model for general agent |
 | `ai_opencode_agents` | See defaults | Full agent routing dict (rendered into `opencode.json`) |
-| `ai_opencode_metrics_version` | `0.3.0` | Metrics version retained for development; plugin disabled by default pending V2 port (set to `"local"` for local dev) |
+| `ai_opencode_metrics_version` | `0.7.0` | opencode-metrics version; `0.7.0` provides permission-capture contract v1 and requires OpenCode V2. Loading remains opt-in (set `"local"` for local dev) |
 | `ai_opencode_metrics_local_path` | `""` | Path to local opencode-metrics repo (only used when version is `"local"`) |
 | `ai_opencode_metrics_config` | `{}` | Optional metrics plugin config dict (deployed as `config.yaml` when non-empty) |
 | `ai_opencode_metrics_data_dir` | `~/.local/share/opencode-metrics` | Metrics plugin data directory (bind-mounted into Grafana container) |
@@ -323,12 +323,12 @@ ai_opencode_agent_general_model: "google-vertex/claude-sonnet-4-6@default"
 
 This routes build to Opus, plan/general to Sonnet, and explore to Haiku.
 
-**Plugins (metrics pending V2 migration):**
+**Plugins (metrics opt-in):**
 
 The [`@mburghardt/opencode-metrics`](https://github.com/marcusburghardt/opencode-metrics)
-plugin is temporarily excluded until ported to the V2 plugin API. Its version
-variable remains pinned to `0.3.0`, but changing it does not enable the plugin.
-Override `ai_opencode_plugins` to load V2-compatible plugins. The default is:
+plugin is V2-compatible from `0.5.0`; `0.7.0` adds the permission-capture
+contract version 1 used by `/session_retro`. Loading remains opt-in: list the
+package in `ai_opencode_plugins`. The default is:
 
 ```yaml
 ai_opencode_plugins: []
@@ -339,8 +339,8 @@ files (e.g., `dcp.jsonc`) are managed by the user outside this role.
 
 **Local development of opencode-metrics:**
 
-The role retains the local loader and configuration deployment for development of
-the V2 port. The local plugin must implement the V2 API before it can run in V2.
+The role retains the local loader and configuration deployment for plugin
+development. The local build must target the OpenCode V2 plugin API.
 
 Workflow:
 
@@ -362,10 +362,10 @@ A leading `~` in the path is expanded to the target user's home directory.
 
 To switch back from local to npm-managed installation:
 
-1. Set `ai_opencode_metrics_version` back to a semver string (e.g., `"0.2.0"`) or `"latest"`
+1. Set `ai_opencode_metrics_version` back to a semver string (e.g., `"0.7.0"`) or `"latest"`
 2. Remove or leave `ai_opencode_metrics_local_path` as-is (it is ignored in npm mode)
 3. Run the playbook -- the loader file is removed automatically. The default
-   `plugins` list remains empty until the V2 plugin migration is complete
+   `plugins` list stays empty unless you add the package to it
 
 **Metrics plugin configuration (optional):**
 
@@ -429,8 +429,8 @@ Override to tune for your context window size or disable compaction entirely.
 - Commands deploy to `~/.config/opencode/commands/`. Existing files in the old
   `command/` directory are left in place; V2 still discovers that directory.
 - Move project instructions from `CLAUDE.md` to `AGENTS.md`.
-- Metrics collection is disabled by default pending the plugin's V2 port.
-  Existing metrics data is retained.
+- Metrics collection remains opt-in. Version `0.7.0` adds the
+  permission-capture contract version 1; existing metrics data is retained.
 
 For a Vertex-only setup:
 
@@ -581,6 +581,103 @@ Validation (no GitHub mutations):
 make test-pr-workflows  # offline unittest suite, fake GitHub inputs
 make test-ansible      # deploy into isolated temporary homes with a fake OpenCode
 make lint              # YAML lint and Ansible syntax check
+```
+
+#### Session retrospective
+
+`/session_retro [--days N] [--project NAME] [--detail LEVEL]` measures session
+friction and proposes configuration changes. It is local, read-only, and
+advisory; it never grants a permission or edits a repository. The command needs
+no project workflow framework and works from any directory.
+
+`configure_opencode` also deploys `files/scripts/session_insights.py` to
+`{{ ai_user_scripts_dir }}/session_insights.py` (default
+`~/bin/session_insights.py`), mode `0750`, independent of
+`ai_opencode_commands_disabled`. The helper requires **Python 3.10+** and uses
+only the standard library and no network access. It opens the OpenCode and
+`opencode-metrics` SQLite databases read-only (`mode=ro`) and supports both the
+legacy `message`/`part` tables and the V2 `session_message`/`session_part`
+tables. A missing source is reported and the remaining sources still produce a
+scorecard.
+
+The scorecard covers five classes:
+
+1. **Permission friction** -- prompts, waits, saved grants, and repeated asks.
+2. **Confirmation stalls** -- `question` calls and their wait distribution.
+3. **Subagent and tool latency** -- `task` and tool durations, excluding
+   sessions over 8 hours and spans that cross an idle event.
+4. **Token and context waste** -- duplicate reads, repeated commands,
+   compactions, and tokens per turn.
+5. **Permission-policy drift** -- persisted grants that are broad or unusable.
+
+Findings need at least 10 events across 3 sessions over 7 observed days to be
+proposable. Confidence is high at 30+ events, medium at 10-29, and low
+otherwise; low-confidence findings are reported but never proposed. When
+permission capture is unavailable, prompt counts come from session-level metrics
+and are labelled with reduced confidence.
+
+**Privacy levels:**
+
+| Level | What is emitted |
+|---|---|
+| `aggregate` (default) | counts, rates, durations, normalized classes only |
+| `patterns` | adds canonical command heads such as `git push` and `make test` |
+| `snippets` | requires `--allow-content`; adds bounded, redacted samples |
+
+The helper never emits prompts, message text, file contents, absolute paths,
+URLs, or command arguments at the default level. Secrets, tokens, headers,
+private keys, and long encoded values are redacted at every level, including
+`snippets`. Reports are written under
+`${XDG_STATE_HOME:-~/.local/state}/opencode/retro/reports/` with `0700`
+directories and `0600` files.
+
+**Proposal targets:**
+
+| Target | Meaning |
+|---|---|
+| `role` | a generic, safe default shipped by this role |
+| `playbook` | an environment-specific override in the personal playbook |
+| `repo` | a concrete `AGENTS.md`, test, Make target, or workflow change |
+| `plugin` | a capture or data-quality change in `opencode-metrics` |
+
+Every proposal shows its evidence, expected effect, risk, and a concrete diff or
+snippet. Creating an OpenSpec change requires explicit approval and happens only
+in the selected repository.
+
+**Intervention ledger:** accepted changes can be recorded in
+`${XDG_STATE_HOME:-~/.local/state}/opencode/retro/interventions.json` with a
+baseline window, target metric, expected direction, and review date. The ledger
+stores no consent and no raw session content. `/session_retro --verify --id
+<id>` compares the current window with the baseline and recommends `keep`,
+`revert`, or `extend`; when the follow-up window has too few sessions it reports
+`insufficient-data` rather than claiming success or failure.
+
+`/workflow_next` adds a `/session_retro --days 30` suggestion to its clean-state
+output when no report exists or the newest report is older than 30 days. This is
+advisory and does not change the command's priority ladder.
+
+Permission capture is implemented by `@mburghardt/opencode-metrics` **0.7.0+**
+through the `permission-capture` contract version 1 (`permission_contract`,
+`permission_events`, and `v_permission_friction`). The role pins `0.7.0` by
+default, and the helper's minimum supported contract version is **1**. The
+helper tolerates an absent or older contract and falls back to session-level
+metrics. Permission events are ephemeral and cannot be backfilled; history
+starts when capture is enabled. The plugin backfills project, agent, and model
+metadata when the session row is persisted after a prompt.
+
+**Hardened permission rules:** implicit `gh api` writes using `-f`, `-F`,
+`--field`, `--raw-field`, or `--input` now ask, as do the positioned forms after
+the API path. `git config` allows only read-only forms (`--get*`, `--list*`,
+`-l*`, `--show-*`); every other `git config` invocation asks, so hooks and
+signing configuration cannot change without review. These rules follow the broad
+`gh *` and read-only `git config` allow rules because the last matching rule
+wins.
+
+Validation:
+
+```bash
+make test-session-insights  # offline helper suite with synthetic databases
+make test-ansible           # deploy and verify command, helper, and rule order
 ```
 
 ### Skills
@@ -753,6 +850,11 @@ session-level guardrails that are independent of any repository:
   never use `--watch`, `tail -f`, `sleep` polling, or interactive commands.
 - **Delegation**: one bounded unit of work per subagent call; ask for conclusions
   and file references rather than transcripts.
+- **Autonomy contract**: continue authorized, reversible, in-scope work without
+  asking; stop only for irreversible actions, remote mutations, spending, scope
+  ambiguity, credentials, or an unavailable mandatory gate. Do not end a turn
+  with a rhetorical confirmation, and batch independent decisions into one
+  question with options.
 
 The file is loaded after `coding-standards.md`, so repository-level rules still win
 on conflicts. Override `ai_opencode_instructions` to reorder or remove it.

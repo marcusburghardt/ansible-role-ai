@@ -1,98 +1,98 @@
 ## 1. Helper: data collection and scorecard
 
-- [ ] 1.1 Create `files/scripts/session_insights.py` with a read-only SQLite
+- [x] 1.1 Create `files/scripts/session_insights.py` with a read-only SQLite
   layer that handles both `message`/`part` and `session_message`/`session_part`
   schemas and opens databases with `mode=ro`.
-- [ ] 1.2 Implement source adapters for `opencode stats --json`, the
+- [x] 1.2 Implement source adapters for `opencode stats --json`, the
   `opencode-metrics` database, and session storage, including explicit
   missing-source reporting.
-- [ ] 1.3 Implement the five finding classes: permission friction,
+- [x] 1.3 Implement the five finding classes: permission friction,
   confirmation stalls, subagent/tool latency, token and context waste, and
   permission-policy drift.
-- [ ] 1.4 Implement canonical command normalization and path classes, including
+- [x] 1.4 Implement canonical command normalization and path classes, including
   removal of assignments, quoting, URLs, paths, and secret-bearing values.
-- [ ] 1.5 Implement evidence thresholds, outlier exclusion, rates per 100 turns
+- [x] 1.5 Implement evidence thresholds, outlier exclusion, rates per 100 turns
   and per 1,000 reads, and high/medium/low confidence.
-- [ ] 1.6 Implement the JSON scorecard schema and a markdown renderer with the
+- [x] 1.6 Implement the JSON scorecard schema and a markdown renderer with the
   window, sources, coverage, findings, evidence, expected effect, risk, and
   proposal target.
-- [ ] 1.7 Implement the `aggregate`, `patterns`, and `snippets` detail levels;
+- [x] 1.7 Implement the `aggregate`, `patterns`, and `snippets` detail levels;
   require `--allow-content` for snippets and redact secrets at every level.
-- [ ] 1.8 Implement private report output under
+- [x] 1.8 Implement private report output under
   `${XDG_STATE_HOME:-~/.local/state}/opencode/retro/reports/` with `0700`
   directories and `0600` files.
-- [ ] 1.9 Implement the intervention ledger and `--verify` comparison against a
+- [x] 1.9 Implement the intervention ledger and `--verify` comparison against a
   baseline window, including the insufficient-data outcome.
 
 ## 2. Command
 
-- [ ] 2.1 Create `files/commands/session_retro.md` with frontmatter, arguments,
+- [x] 2.1 Create `files/commands/session_retro.md` with frontmatter, arguments,
   preflight checks, helper invocation, scorecard presentation, proposal
   selection, and explicit confirmation boundaries.
-- [ ] 2.2 Define the proposal routing rules for role defaults, personal
+- [x] 2.2 Define the proposal routing rules for role defaults, personal
   playbook, repository guidance/tests, and the metrics plugin.
-- [ ] 2.3 Ensure the command never reads session exports or raw parts unless the
+- [x] 2.3 Ensure the command never reads session exports or raw parts unless the
   user requests snippets for a bounded finding.
-- [ ] 2.4 Ensure the command can create an OpenSpec change only after explicit
+- [x] 2.4 Ensure the command can create an OpenSpec change only after explicit
   approval and only in the selected repository.
-- [ ] 2.5 Add a `Next Steps` pointer from `workflow_next` clean-state output to
+- [x] 2.5 Add a `Next Steps` pointer from `workflow_next` clean-state output to
   `/session_retro` when a retrospective is due, without changing the priority
   ladder.
 
 ## 3. Permission hardening
 
-- [ ] 3.1 Add ask rules for implicit `gh api` writes: `-f`, `-F`, `--field`,
+- [x] 3.1 Add ask rules for implicit `gh api` writes: `-f`, `-F`, `--field`,
   `--raw-field`, and `--input`, after the `gh *` allow rule.
-- [ ] 3.2 Replace the broad `git config *` allow rule with read-only forms and
+- [x] 3.2 Replace the broad `git config *` allow rule with read-only forms and
   an ask rule for all other `git config` invocations, preserving last-match-wins
   ordering.
-- [ ] 3.3 Add a short comment explaining why the new rules must follow the broad
+- [x] 3.3 Add a short comment explaining why the new rules must follow the broad
   allow rules.
 
 ## 4. Autonomy contract
 
-- [ ] 4.1 Add the continue/stop conditions, anti-rhetorical-confirmation rule,
+- [x] 4.1 Add the continue/stop conditions, anti-rhetorical-confirmation rule,
   and decision batching to `files/agent-operating-rules.md`.
-- [ ] 4.2 Review shipped commands for text that invites unnecessary
+- [x] 4.2 Review shipped commands for text that invites unnecessary
   confirmation and align them with the contract where it does not weaken a
   mandatory gate.
 
 ## 5. Tests and documentation
 
-- [ ] 5.1 Add `tests/test_session_insights.py` with synthetic legacy and V2
+- [x] 5.1 Add `tests/test_session_insights.py` with synthetic legacy and V2
   session schemas, a synthetic metrics database, synthetic permission events,
   and intervention records.
-- [ ] 5.2 Cover redaction, thresholds, source degradation, canonicalization,
+- [x] 5.2 Cover redaction, thresholds, source degradation, canonicalization,
   and keep/revert/extend verification in the unit tests.
-- [ ] 5.3 Extend `tests/test.yml` to assert command and helper deployment,
+- [x] 5.3 Extend `tests/test.yml` to assert command and helper deployment,
   modes, autonomy-contract content, and permission rule ordering.
-- [ ] 5.4 Add the new test target to `Makefile` and include it in `make test`.
-- [ ] 5.5 Document `/session_retro`, privacy levels, proposal targets,
+- [x] 5.4 Add the new test target to `Makefile` and include it in `make test`.
+- [x] 5.5 Document `/session_retro`, privacy levels, proposal targets,
   intervention verification, and the hardened rules in `README.md`.
-- [ ] 5.6 Run `make test`, `make lint`, and `openspec validate
+- [x] 5.6 Run `make test`, `make lint`, and `openspec validate
   session-retro-loop --strict`.
 
 ## 6. Parallel: opencode-metrics permission capture
 
 External repository: `~/GIT/me/opencode-metrics`.
 
-- [ ] 6.1 Create an OpenSpec change in `opencode-metrics` from the
+- [x] 6.1 Create an OpenSpec change in `opencode-metrics` from the
   `permission-capture` capability in this change.
-- [ ] 6.2 Add the version-1 permission event table, unique permission
+- [x] 6.2 Add the version-1 permission event table, unique permission
   identifier, upsert behavior, and contract version marker.
-- [ ] 6.3 Persist asked/replied timestamps, action, canonical resource, salted
+- [x] 6.3 Persist asked/replied timestamps, action, canonical resource, salted
   hash, reply, save patterns, source tool/message, project, agent, and model.
-- [ ] 6.4 Implement canonicalization and redaction at capture time; keep raw
+- [x] 6.4 Implement canonicalization and redaction at capture time; keep raw
   resources disabled by default.
-- [ ] 6.5 Add the friction view with prompt count, median/p95 wait, always and
+- [x] 6.5 Add the friction view with prompt count, median/p95 wait, always and
   reject counts, and first/last seen.
-- [ ] 6.6 Add retention cleanup (default 90 days), the disable switch, and
+- [x] 6.6 Add retention cleanup (default 90 days), the disable switch, and
   owner-only database permissions.
-- [ ] 6.7 Add tests for ingestion, duplicates, late replies, redaction,
+- [x] 6.7 Add tests for ingestion, duplicates, late replies, redaction,
   retention, the view, and fail-open behavior.
-- [ ] 6.8 Document the contract, table and view names, sanitization, retention,
+- [x] 6.8 Document the contract, table and view names, sanitization, retention,
   and the no-backfill limitation.
-- [ ] 6.9 Release the plugin and record the minimum contract version the role
+- [x] 6.9 Release the plugin and record the minimum contract version the role
   helper can consume.
 
 ## 7. Parallel: environment and repository proposals
@@ -100,9 +100,9 @@ External repository: `~/GIT/me/opencode-metrics`.
 These tasks consume the first trustworthy scorecard; they do not block the
 helper or the plugin.
 
-- [ ] 7.1 Run `/session_retro --days 30` in the main working environment and
+- [x] 7.1 Run `/session_retro --days 30` in the main working environment and
   review the first scorecard.
-- [ ] 7.2 Apply approved environment-specific overrides to
+- [x] 7.2 Apply approved environment-specific overrides to
   `~/GIT/mbtech/Ansible/dev_ai.yml` in a separate change.
 - [ ] 7.3 For each repository-level finding, create a scoped proposal for the
   identified `AGENTS.md`, deterministic test, task runner, or workflow change.
