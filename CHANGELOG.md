@@ -21,6 +21,28 @@
 * Use compaction `keep.tokens` and `buffer`, deploy commands to `commands/`, and remove `CLAUDE.md` from default instructions.
 * Disable the metrics plugin by default pending its V2 API migration; retain local development infrastructure and metrics data.
 
+## [0.8.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.7.0...v0.8.0) (2026-11-27)
+
+
+### Features
+
+* add session retrospective loop ([287aac1](https://github.com/marcusburghardt/ansible-role-ai/commit/287aac1446e89135d6fca5ac84588673dc0ab23d))
+* **opencode:** add MCP server configuration variable ([db10d35](https://github.com/marcusburghardt/ansible-role-ai/commit/db10d35dc7d76cb207096b6f94c53974c7266f26))
+* **openspec:** propose session retrospective loop ([448fead](https://github.com/marcusburghardt/ansible-role-ai/commit/448fead8effc21fa80be7668576099764046f920))
+
+
+### Miscellaneous
+
+* **openspec:** archive add-mcp-server-config ([7e140cd](https://github.com/marcusburghardt/ansible-role-ai/commit/7e140cdccf54a39c862d67dd4daa8299d661db31))
+* **openspec:** record confirmation intervention ([01b9177](https://github.com/marcusburghardt/ansible-role-ai/commit/01b9177d81b32e6a19980718b76b56a0da9618e3))
+* **openspec:** record upstream repository proposal ([8bd3434](https://github.com/marcusburghardt/ansible-role-ai/commit/8bd3434bd629f926ffeff8d57f59eede10546440))
+
+
+### Documentation
+
+* document workflow_next command ([2200769](https://github.com/marcusburghardt/ansible-role-ai/commit/22007696d9f993452e406dc69d537c7cc0e94e5e))
+* **openspec:** propose MCP server configuration support ([8d378c4](https://github.com/marcusburghardt/ansible-role-ai/commit/8d378c435a7d1269f4a86c05c6edce965a45c236))
+
 ## [0.7.0](https://github.com/marcusburghardt/ansible-role-ai/compare/v0.6.0...v0.7.0) (2026-11-26)
 
 
