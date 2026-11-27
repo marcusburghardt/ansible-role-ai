@@ -106,7 +106,7 @@ helper or the plugin.
   `~/GIT/mbtech/Ansible/dev_ai.yml` in a separate change.
 - [x] 7.3 For each repository-level finding, create a scoped proposal for the
   identified `AGENTS.md`, deterministic test, task runner, or workflow change.
-- [ ] 7.4 Record accepted interventions in the ledger with baseline windows and
+- [x] 7.4 Record accepted interventions in the ledger with baseline windows and
   review dates.
 - [ ] 7.5 Re-run verification after the review date and keep, revert, or extend
   each intervention based on the measured result.
