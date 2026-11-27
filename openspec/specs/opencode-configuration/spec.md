@@ -23,7 +23,7 @@ The template SHALL incorporate variables for model, default agent
 plugin list (`ai_opencode_plugins`), provider settings (`ai_opencode_providers`),
 permissions (`ai_opencode_permissions`), compaction settings
 (`ai_opencode_compaction`), instruction file list (`ai_opencode_instructions`),
-and watcher ignore patterns.
+MCP server list (`ai_opencode_mcp_servers`), and watcher ignore patterns.
 
 #### Scenario: Configuration file reflects variable overrides
 - **WHEN** the consumer overrides `ai_model` to `anthropic/claude-sonnet-4-5` and `ai_gcp_project` to `my-project`
@@ -299,3 +299,25 @@ The role SHALL provide an `ai_vertex_credentials_file` variable (default: `""`) 
 #### Scenario: Credentials path is quoted and only the path is rendered
 - **WHEN** the credentials path contains spaces or shell metacharacters
 - **THEN** the launcher export SHALL be safely quoted, and the key file contents SHALL NOT appear in any deployed file
+
+### Requirement: Render MCP server configuration
+The role SHALL provide an `ai_opencode_mcp_servers` dict variable, defaulting to
+`{}`, whose entries are rendered unchanged as the OpenCode V2 `mcp.servers`
+block. The block SHALL always be present so an empty value cannot inherit a
+server from a previous hand edit.
+
+#### Scenario: Empty default renders an explicit empty block
+- **WHEN** the consumer does not override `ai_opencode_mcp_servers`
+- **THEN** the deployed `opencode.json` SHALL contain `"mcp": {"servers": {}}`
+
+#### Scenario: Consumer declares a local server
+- **WHEN** the consumer sets `ai_opencode_mcp_servers` to a single entry with `type: local` and a `command` list
+- **THEN** the deployed `opencode.json` SHALL contain that entry under `mcp.servers` with its type and command unchanged
+
+#### Scenario: Server names are not placed directly under mcp
+- **WHEN** the role deploys a configuration with one configured server
+- **THEN** the server name SHALL appear only under `mcp.servers`, never as a direct child of `mcp`
+
+#### Scenario: A disabled server is still rendered
+- **WHEN** a consumer entry sets `disabled: true`
+- **THEN** the deployed `opencode.json` SHALL include that entry with `disabled` set to `true`
