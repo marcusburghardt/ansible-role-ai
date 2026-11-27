@@ -494,6 +494,32 @@ The role will not touch command files it does not manage. If a custom command ha
 same filename as a built-in, the custom version wins (custom deployment runs after
 built-in deployment).
 
+#### Workflow suggestions
+
+`/workflow_next` inspects the current repository and prints the single most
+logical next action. It is stateless and advisory: it does not execute the
+suggestion. Checks run in priority order and stop at the first match:
+
+1. **Uncommitted changes** -- suggest staging and committing, following
+   `~/.config/opencode/commit.md` for the message format.
+2. **Unpushed commits** -- suggest `git push`, or `git push -u origin <branch>`
+   when the branch has no upstream.
+3. **Squash opportunity** -- 3 or more commits ahead of the default branch that
+   share a Conventional Commits type are flagged for an interactive rebase.
+4. **Active spec-driven change with pending tasks** -- suggest continuing with
+   `/opsx-apply` for OpenSpec, or the equivalent SpecKit workflow.
+5. **Completed change not yet archived** -- suggest `/opsx-archive <name>`.
+6. **Clean state** -- report that nothing needs attention and suggest starting
+   new work (`/opsx-propose`, `/opsx-explore`) or reviewing a PR.
+
+The command uses `git` and `openspec` output where present; it asks `gh` for the
+default branch and falls back to `main`. Results are a point-in-time snapshot,
+so run the command again after acting on a suggestion.
+
+`checkout_pr`, `review_pr`, and `refresh_spec_frameworks` end with their own
+context-aware `Next Steps` sections that point to the appropriate follow-up
+command.
+
 #### Portable PR workflows
 
 `/review_pr [PR_NUMBER]` and `/address_feedback [PR_NUMBER]` are standalone GitHub
