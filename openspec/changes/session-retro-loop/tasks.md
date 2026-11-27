@@ -104,7 +104,7 @@ helper or the plugin.
   review the first scorecard.
 - [x] 7.2 Apply approved environment-specific overrides to
   `~/GIT/mbtech/Ansible/dev_ai.yml` in a separate change.
-- [ ] 7.3 For each repository-level finding, create a scoped proposal for the
+- [x] 7.3 For each repository-level finding, create a scoped proposal for the
   identified `AGENTS.md`, deterministic test, task runner, or workflow change.
 - [ ] 7.4 Record accepted interventions in the ledger with baseline windows and
   review dates.
